@@ -11,7 +11,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 _CITATION = re.compile(r"\(Citation:[^)]*\)")
 _TAGS = re.compile(r"</?code>|<br\s*/?>")
@@ -38,7 +38,7 @@ class Chunk:
     name: str
     tactics: list[str]
     is_subtechnique: bool
-    parent_id: Optional[str]
+    parent_id: str | None
     platforms: list[str]
     description: str
     detection: list[str]          # analytic descriptions
@@ -65,7 +65,7 @@ class Hit:
     mitigations: list[Mitigation] = field(default_factory=list)
 
 
-def _attack_id(obj: dict) -> Optional[str]:
+def _attack_id(obj: dict) -> str | None:
     for ref in obj.get("external_references", []):
         if ref.get("source_name") == "mitre-attack":
             return ref.get("external_id")
@@ -127,7 +127,7 @@ def load_chunks(stix_path: str | Path) -> list[Chunk]:
 
 
 class AttackKB:
-    def __init__(self, chunks: list[Chunk], embedding_model: str, persist_dir: Optional[str | Path] = None):
+    def __init__(self, chunks: list[Chunk], embedding_model: str, persist_dir: str | Path | None = None):
         import chromadb
         from sentence_transformers import SentenceTransformer
 
@@ -153,10 +153,12 @@ class AttackKB:
 
     def search(self, query: str, k: int = 5, include_subtechniques: bool = True) -> list[Hit]:
         q = self.model.encode([query], normalize_embeddings=True, show_progress_bar=False)
-        where = None if include_subtechniques else {"sub": False}
-        res = self.col.query(query_embeddings=q.tolist(), n_results=k, where=where)
+        where: dict[str, Any] | None = None if include_subtechniques else {"sub": False}
+        res = self.col.query(query_embeddings=q.tolist(), n_results=k,
+                             where=where)
+        dists = (res["distances"] or [[]])[0]
         hits = []
-        for cid, dist in zip(res["ids"][0], res["distances"][0]):
+        for cid, dist in zip(res["ids"][0], dists, strict=True):
             c = self.chunks[cid]
             hits.append(Hit(id=c.id, name=c.name, score=round(1.0 - float(dist), 4), tactics=c.tactics,
                             snippet=c.description[:400], mitigations=c.mitigations))
@@ -166,7 +168,7 @@ class AttackKB:
     def retrieved_ids(self) -> set[str]:
         return {i for t in self.trace for i in t["ids"]}
 
-    def get(self, attack_id: str) -> Optional[Chunk]:
+    def get(self, attack_id: str) -> Chunk | None:
         return self.chunks.get(attack_id)
 
     def mitigations_for(self, attack_id: str) -> list[Mitigation]:

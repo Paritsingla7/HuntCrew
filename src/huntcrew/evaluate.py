@@ -7,7 +7,8 @@ docs/data-provenance.md). Technique matching is parent-level (T1110 accepts T111
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Iterable
+from collections.abc import Iterable
+from typing import cast
 
 import pandas as pd
 
@@ -39,16 +40,17 @@ def parent(technique_id: str) -> str:
 
 def score_findings(findings: Iterable[Finding], truth: pd.DataFrame, windows: list[Window]) -> dict:
     """(window, entity)-level detection scores and parent-level technique accuracy on true positives."""
-    starts = {w.start: w.index for w in windows}
+    starts = {pd.Timestamp(w.start): w.index for w in windows}
     pred: dict[tuple[int, str], list[str]] = defaultdict(list)
     for f in findings:
-        if not f.suspicious or f.window_start not in starts:
+        ws = pd.Timestamp(f.window_start)
+        if not f.suspicious or ws not in starts:
             continue
-        pred[(starts[f.window_start], f.entity)].extend(h.id for h in f.technique_hints)
+        pred[(starts[ws], f.entity)].extend(h.id for h in f.technique_hints)
 
     truth_tech: dict[tuple[int, str], set[str]] = defaultdict(set)
-    for r in truth.itertuples():
-        truth_tech[(r.window_index, r.entity)].add(r.technique)
+    for r in truth.itertuples(index=False):
+        truth_tech[(int(cast(int, r.window_index)), str(r.entity))].add(str(r.technique))
 
     keys_t, keys_p = set(truth_tech), set(pred)
     tp, fp, fn = keys_t & keys_p, keys_p - keys_t, keys_t - keys_p

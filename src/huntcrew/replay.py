@@ -6,8 +6,8 @@ there is nothing to leak.
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator
 
 import pandas as pd
 
