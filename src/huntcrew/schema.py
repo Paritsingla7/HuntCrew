@@ -127,3 +127,16 @@ class ActionLog(BaseModel):
 
     def by_status(self, status: str) -> list[ActionRecord]:
         return [r for r in self.records if r.status == status]
+
+
+class TechniqueAssessment(BaseModel):
+    id: str
+    confidence: float = 0.5
+    citation: str = ""
+
+
+class ThreatAssessment(BaseModel):
+    incident_id: str
+    techniques: list[TechniqueAssessment] = Field(default_factory=list)
+    rationale: str = ""
+    dropped_ids: list[str] = Field(default_factory=list)      # cited but not real / not retrieved
