@@ -1,0 +1,55 @@
+# HuntCrew — single source of truth for tunables. Swap models/paths here, not in code.
+
+llm:
+  model: mistral/mistral-small-latest   # LiteLLM model string; key from env MISTRAL_API_KEY
+  temperature: 0.0
+  max_retries: 5
+  min_interval_s: 1.2                   # throttle: free tier is ~1 request/second (community-observed, verify)
+  cache_dir: .cache/llm
+
+rag:
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  top_k: 5
+  persist_dir: .cache/chroma
+
+data:
+  cic_parquet: data/external/cic-ids2017/CICIDS_Flow.parquet
+  attack_stix: data/external/attack-stix/enterprise-attack.json
+  policy: data/policy/policy.json
+
+replay:
+  window_minutes: 5
+  history_windows: 12          # how far back the agent's tools may look; never forward
+
+labels:
+  in_scope: [BENIGN, FTP-Patator, SSH-Patator, Bot, PortScan]
+  # Hand-made mapping, published in docs/label-mapping.md. Grading is parent-level:
+  # a truth of T1110 accepts T1110 or any T1110.xxx sub-technique.
+  to_technique:
+    FTP-Patator: T1110
+    SSH-Patator: T1110
+    Bot: T1071
+    PortScan: T1046
+  match_level: parent
+
+# Pre-registered on 2026-10-15, before any detector result existed (ADR-019). Do not edit after results.
+# Tune/dev choices (digest statistics, B0 thresholds) may use `dev` and `baseline_benign` only.
+splits:
+  baseline_benign: {start: "2017-07-03 09:00", end: "2017-07-03 17:00"}   # Monday: benign only
+  dev:
+    - {name: ftp_patator, start: "2017-07-04 09:00", end: "2017-07-04 10:45"}
+  test:
+    - {name: ssh_patator, start: "2017-07-04 14:00", end: "2017-07-04 15:30"}
+    - {name: bot,         start: "2017-07-07 10:00", end: "2017-07-07 12:00"}
+    - {name: portscan,    start: "2017-07-07 14:00", end: "2017-07-07 15:30"}
+
+# B0 baseline only (a classic rules engine). The agent detector does NOT use these.
+baseline_rules:
+  password_guessing: {min_flows: 50, window_s: 300, ports: [21, 22]}
+  port_scan: {min_distinct_ports: 100, window_s: 300}
+  beaconing: {min_flows: 10, max_cv: 0.3}
+
+# Pre-registered bar for "agent detector is usable" (ADR-019). If missed -> B2-hybrid.
+decision_gate:
+  min_recall_vs_b0: 0.70       # agent recall >= 70% of B0 recall on dev
+  max_fp_ratio_vs_b0: 2.0      # agent false-positive incidents <= 2x B0's

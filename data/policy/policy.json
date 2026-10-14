@@ -1,0 +1,17 @@
+{
+  "_note": "Organisational policy (hand-made by design: it is a rule set, not a retrievable fact). Protected assets were derived from the data: the two hosts receiving almost all DNS (port 53) flows in CIC-IDS2017.",
+  "protected_assets": [
+    {"ip": "192.168.10.3", "role": "DNS / domain controller", "evidence": "663,674 dst-port-53 flows"},
+    {"ip": "192.168.10.1", "role": "gateway / secondary DNS", "evidence": "294,066 dst-port-53 flows"}
+  ],
+  "action_catalog": {
+    "block_ip":             {"risk": "low",    "description": "Block an IP address at the perimeter firewall"},
+    "block_domain":         {"risk": "low",    "description": "Block or sinkhole a domain at the DNS resolver"},
+    "open_ticket":          {"risk": "low",    "description": "Open a ticket for follow-up by a human"},
+    "rate_limit_ip":        {"risk": "low",    "description": "Rate-limit connections from an IP"},
+    "enable_waf_rule":      {"risk": "medium", "description": "Enable a web application firewall rule set"},
+    "force_password_reset": {"risk": "medium", "description": "Force a password reset and revoke sessions for a user"},
+    "disable_account":      {"risk": "medium", "description": "Disable a user account"},
+    "isolate_host":         {"risk": "high",   "description": "Quarantine a host from the network"}
+  }
+}
