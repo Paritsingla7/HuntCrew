@@ -27,32 +27,46 @@ from .profile import BaselineProfile  # noqa: E402
 from .replay import Replay, Window  # noqa: E402
 from .schema import Finding, Incident  # noqa: E402
 
-TASK_TEMPLATE = """You are reviewing ONE {minutes}-minute window of network flow statistics ({label}).
-Decide which source addresses behave like an attack or a compromised host.
+SCREEN_TEMPLATE = """You are screening network sources seen in ONE {minutes}-minute window ({label}).
+{peers}
+For EACH source below decide whether it is doing something its peers are not doing.
+Look at: how many destinations and ports it uses, how concentrated its traffic is on one port or one
+destination (top_port_share, top_dst_share), how regular its timing is (per_min_cv), and how much data
+moves. Ordinary clients and servers are the majority; mark a source unusual only if its pattern differs
+clearly from its peers. Volume alone is not enough.
+
+Return ONLY this JSON, one entry per source, same order:
+{{"sources": [{{"entity": "<ip>", "unusual": false, "why": "<=15 words"}}]}}
+
+SOURCES
+{rows}
+"""
+
+VERIFY_TEMPLATE = """These sources were flagged as unusual in ONE {minutes}-minute window ({label}).
+Decide which of them really behave like an attack or a compromised host.
+
+{peers}
+CANDIDATES
+{rows}
 
 Method:
-1. Compare every listed source with its peers (see the PEERS line) and with what is typical for it.
-   Sources are listed in address order, not by importance. Most sources are ordinary clients and servers.
-2. For each source whose pattern is clearly unlike its peers, call source_profile and compare it with its
-   normal baseline and recent history. Volume alone is NOT suspicious, and a destination never seen in
-   the baseline is common for ordinary browsing and name lookups, so it is not suspicious by itself.
-3. Describe what the source is doing in plain terms (how many destinations, how many ports, how regular,
-   how much data), then call search_attack_kb with that description. Flag the source only if a retrieved
-   ATT&CK technique genuinely matches the behaviour.
-4. Only quote numbers that appear in the digest or in tool outputs. Only cite technique IDs returned by
-   search_attack_kb. At most 5 findings, shortest evidence that proves the point. If nothing stands out,
-   return {{"findings": []}}.
+1. For each candidate call source_profile and compare it with its baseline and recent history.
+2. Describe what it is doing in plain terms, then call search_attack_kb with that description. Confirm a
+   candidate only if a retrieved ATT&CK technique genuinely matches the behaviour. Volume alone is not
+   an attack, and a destination never seen in the baseline is common for ordinary browsing.
+3. Only quote numbers that appear in the rows above or in tool outputs. Only cite technique IDs returned
+   by search_attack_kb. Drop candidates that turn out to be ordinary.
 
 Allowed evidence metric names: flows, dst_ips, dst_ports, ext_dst_ips, fwd_bytes, bwd_bytes, syn, rst,
-active_minutes, per_minute_mean, per_minute_cv, mean_duration_ms.
+active_minutes, per_minute_mean, per_minute_cv, mean_duration_ms, top_port_share, top_dst_share.
 
-Final answer must be ONLY this JSON (no prose):
+Final answer must be ONLY this JSON (no prose); return {{"findings": []}} if none is confirmed:
 {{"findings": [{{"entity": "<source ip>", "behaviour": "<=25 words", "evidence": {{"flows": 0}},
 "technique_hints": [{{"id": "T0000", "citation": "T0000"}}], "confidence": 0.0}}]}}
-
-DIGEST
-{digest}
 """
+
+MAX_CANDIDATES = 8
+SCREEN_CHUNK = 12
 
 
 @dataclass
@@ -64,12 +78,15 @@ class WindowResult:
     parse_error: bool = False
     raw: str = ""
     usage: dict[str, float] = field(default_factory=dict)
+    screened_unusual: list[str] = field(default_factory=list)
+    candidates_truncated: int = 0
 
     def to_json(self) -> dict[str, Any]:
         return {"index": self.window.index, "start": str(self.window.start), "end": str(self.window.end),
                 "findings": [f.model_dump(mode="json") for f in self.findings], "rejected": self.rejected,
                 "dropped_hints": self.dropped_hints, "parse_error": self.parse_error,
-                "raw": self.raw[:2000], "usage": self.usage}
+                "raw": self.raw[:2000], "usage": self.usage,
+                "screened_unusual": self.screened_unusual, "candidates_truncated": self.candidates_truncated}
 
 
 def parse_findings_json(text: str) -> list[dict] | None:
@@ -128,27 +145,80 @@ def _run_agent(llm: Any, tools: list[Any], prompt: str, max_iter: int) -> str:
     return str(getattr(out, "raw", out))
 
 
-def detect_window(ctx: DetectorContext, llm: Any, known_ids: set[str], minutes: int, max_iter: int = 5,
+def parse_screen_json(text: str, allowed: set[str]) -> dict[str, str] | None:
+    """Return {entity: why} for sources marked unusual; None if unparseable. Unknown entities are ignored."""
+    if not text:
+        return None
+    i, k = text.find("{"), text.rfind("}")
+    if i < 0 or k <= i:
+        return None
+    try:
+        data = json.loads(text[i:k + 1])
+    except json.JSONDecodeError:
+        return None
+    items = data.get("sources") if isinstance(data, dict) else None
+    if not isinstance(items, list):
+        return None
+    out: dict[str, str] = {}
+    for x in items:
+        if isinstance(x, dict) and x.get("unusual") is True and str(x.get("entity")) in allowed:
+            out[str(x["entity"])] = str(x.get("why", ""))[:120]
+    return out
+
+
+def screen_sources(ctx: DetectorContext, llm: Any, minutes: int) -> tuple[dict[str, str], bool]:
+    """Stage 1: the model judges EVERY listed source against its peers (forced coverage, small chunks)."""
+    ents = ctx.digest.entities
+    peers = ("PEERS(in-network median) " + " ".join(f"{k}={v:g}" for k, v in ctx.digest.peers.items())
+             if ctx.digest.peers else "")
+    flagged: dict[str, str] = {}
+    failed = False
+    for i in range(0, len(ents), SCREEN_CHUNK):
+        part = ents[i:i + SCREEN_CHUNK]
+        prompt = SCREEN_TEMPLATE.format(minutes=minutes, label=ctx.window.label(), peers=peers,
+                                        rows="\n".join(e.row() for e in part))
+        text = str(llm.call([{"role": "system", "content": "You are a careful network security analyst."},
+                             {"role": "user", "content": prompt}]))
+        got = parse_screen_json(text, {e.entity for e in part})
+        if got is None:
+            failed = True
+        else:
+            flagged.update(got)
+    return flagged, failed
+
+
+def detect_window(ctx: DetectorContext, llm: Any, known_ids: set[str], minutes: int, max_iter: int = 6,
                   mw: Middleware | None = None) -> WindowResult:
     before = mw.stats.snapshot() if mw else {}
     ctx.trace_start = len(ctx.kb.trace)
     res = WindowResult(window=ctx.window)
     if ctx.digest.total_flows == 0:
         return res
-    prompt = TASK_TEMPLATE.format(minutes=minutes, label=ctx.window.label(), digest=ctx.digest.to_text())
-    raw = _run_agent(llm, build_tools(ctx), prompt, max_iter)
-    res.raw = raw
-    items = parse_findings_json(raw)
-    if items is None:
-        res.parse_error = True
-    else:
-        for draft in items[:5]:
-            v = verify_finding(draft, ctx, known_ids)
-            res.dropped_hints += len(v.dropped_hints)
-            if v.ok and v.finding is not None:
-                res.findings.append(v.finding)
-            else:
-                res.rejected.append({"entity": str(draft.get("entity", "")), "reasons": v.reasons})
+
+    flagged, failed = screen_sources(ctx, llm, minutes)
+    res.screened_unusual = sorted(flagged)
+    res.parse_error = failed
+    if flagged:
+        cand = sorted(flagged)[:MAX_CANDIDATES]
+        res.candidates_truncated = len(flagged) - len(cand)
+        by_ent = {e.entity: e for e in ctx.digest.entities}
+        peers = ("PEERS(in-network median) " + " ".join(f"{k}={v:g}" for k, v in ctx.digest.peers.items())
+                 if ctx.digest.peers else "")
+        rows = "\n".join(f"{by_ent[c].row()}  | screening note: {flagged[c]}" for c in cand if c in by_ent)
+        prompt = VERIFY_TEMPLATE.format(minutes=minutes, label=ctx.window.label(), peers=peers, rows=rows)
+        raw = _run_agent(llm, build_tools(ctx), prompt, max_iter)
+        res.raw = raw
+        items = parse_findings_json(raw)
+        if items is None:
+            res.parse_error = True
+        else:
+            for draft in items[:MAX_CANDIDATES]:
+                v = verify_finding(draft, ctx, known_ids)
+                res.dropped_hints += len(v.dropped_hints)
+                if v.ok and v.finding is not None:
+                    res.findings.append(v.finding)
+                else:
+                    res.rejected.append({"entity": str(draft.get("entity", "")), "reasons": v.reasons})
     if mw:
         res.usage = mw.stats.delta(before)
     return res
@@ -180,7 +250,9 @@ def run_detector(flows: pd.DataFrame, start: str, end: str, cfg: dict, kb: Attac
             d = done[w.index]
             results.append(WindowResult(window=w, findings=[Finding(**f) for f in d["findings"]],
                                         rejected=d["rejected"], dropped_hints=d["dropped_hints"],
-                                        parse_error=d["parse_error"], raw=d.get("raw", ""), usage=d["usage"]))
+                                        parse_error=d["parse_error"], raw=d.get("raw", ""), usage=d["usage"],
+                                        screened_unusual=d.get("screened_unusual", []),
+                                        candidates_truncated=d.get("candidates_truncated", 0)))
             continue
         if limit is not None and processed >= limit:
             break

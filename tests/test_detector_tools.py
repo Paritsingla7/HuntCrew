@@ -111,3 +111,28 @@ def test_evidence_tolerates_small_float_rounding():
     v = verify_finding({"entity": "172.16.0.1", "evidence": {"per_minute_mean": round(st.per_minute_mean, 1)}},
                        ctx, set())
     assert v.ok
+
+
+def test_screen_parser_keeps_only_unusual_known_entities():
+    from huntcrew.detector import parse_screen_json
+    text = ('```json\n{"sources": [{"entity": "A", "unusual": true, "why": "one port"}, '
+            '{"entity": "B", "unusual": false, "why": "normal"}, '
+            '{"entity": "Z", "unusual": true, "why": "not in chunk"}]}\n```')
+    assert parse_screen_json(text, {"A", "B"}) == {"A": "one port"}
+    assert parse_screen_json("no json", {"A"}) is None
+    assert parse_screen_json('{"sources": "x"}', {"A"}) is None
+
+
+def test_merge_into_incidents_joins_adjacent_windows_only():
+    from datetime import datetime
+
+    from huntcrew.detector import merge_into_incidents
+    from huntcrew.schema import Finding
+
+    def f(ent, minute):
+        t = datetime(2017, 7, 4, 9, minute)
+        return Finding(window_start=t, window_end=t.replace(minute=minute + 5), entity=ent, behaviour="x")
+
+    inc = merge_into_incidents([f("A", 0), f("A", 5), f("A", 10), f("A", 40), f("B", 5)], 5)
+    spans = sorted((i.entity, len(i.findings)) for i in inc)
+    assert spans == [("A", 1), ("A", 3), ("B", 1)]
