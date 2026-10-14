@@ -89,6 +89,8 @@ agents may see** (middle), **agents whose every output is checked by code** (rig
 - **Chunk:** one technique = one chunk; metadata carries `attack_id`, `name`, `tactics`, `mitigation_ids`.
 - **Embeddings:** `all-MiniLM-L6-v2`, local (no API quota). Store: ChromaDB.
 - **Retrieval:** cosine top-k with scores; every call is logged to a retrieval trace used by the guardrail.
+- **Retrieval check:** a 20-query smoke set of plain-language behaviours (hand-written, so a sanity check and
+  not an independent benchmark) gives hit@1 0.80, hit@3 0.95, hit@5 0.95 on ATT&CK v20 (706 chunks).
 - **Used in three places:** Detector (does this behaviour match known attacker behaviour?),
   Threat-Intel (name the technique), Strategist (official mitigations).
 

@@ -2,6 +2,14 @@
 
 Newest entry on top.
 
+## 2026-10-15 (night) — P3 Knowledge base
+- `attack_kb.py`: official ATT&CK v20 STIX → 706 chunks (227 techniques + 479 sub-techniques), each joined with
+  its official mitigations and detection analytics; local MiniLM embeddings in ChromaDB; every search is
+  traced so guardrails can verify a cited ID was really retrieved.
+- Retrieval smoke set (20 hand-written queries): hit@1 0.80, hit@3 0.95, hit@5 0.95.
+- Tests: 34 passing (first run downloads the embedding model, ~1 min).
+- Next: P4 detector agent (needs the provider API key and limits).
+
 ## 2026-10-15 (evening) — P2 Replay, digest, B0 baseline
 - Replay clock with bounded history and a no-future guard; refuses flows that carry label columns.
 - Digest: statistics only, no thresholds, no verdict words (tested). Real-data check showed ~300–550 sources
@@ -36,7 +44,7 @@ Newest entry on top.
 |---|---|
 | P1 Foundation | ✅ done |
 | P2 Replay + digest + B0 | ✅ done |
-| P3 Knowledge base | ⬜ |
+| P3 Knowledge base | ✅ done |
 | P4 Detector agent | ⬜ |
 | P5 Downstream crew + response | ⬜ |
 | P6 Evaluation | ⬜ |
