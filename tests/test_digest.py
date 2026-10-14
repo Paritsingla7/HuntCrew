@@ -23,7 +23,7 @@ def test_basic_statistics_and_regularity():
              _row("2017-07-04 14:03", "192.168.10.9", "192.168.10.3", 445)]
     d = build_digest(pd.DataFrame(rows), W)
     assert d.total_flows == 8 and d.sources == 2
-    a = d.entities[0]                      # most flows first
+    a = d.entities[0]                      # neutral address order: 172.16.0.1 before 192.168.10.9
     assert a.entity == "172.16.0.1" and a.flows == 5 and a.dst_ports == 1
     assert a.top_ports == [(22, 5)] and a.ext_dst_ips == 0
     assert a.active_minutes == 5 and a.per_minute_cv == 0.0     # one flow every minute: perfectly regular
@@ -67,3 +67,12 @@ def test_digest_text_has_no_verdict_words():
     text = d.to_text().lower()
     for word in ("suspicious", "attack", "malicious", "scan", "brute"):
         assert word not in text
+
+
+def test_listing_order_is_by_address_not_by_volume_and_peers_line_present():
+    rows = [_row("2017-07-04 14:00", "192.168.10.200", "10.1.1.1", 80)] * 5 + \
+           [_row("2017-07-04 14:00", "192.168.10.9", "10.1.1.1", 80)] * 1
+    d = build_digest(pd.DataFrame(rows), W)
+    assert [e.entity for e in d.entities] == ["192.168.10.9", "192.168.10.200"]
+    assert d.peers["flows"] == 3.0
+    assert "PEERS(in-network median)" in d.to_text()

@@ -74,6 +74,7 @@ class WindowDigest(BaseModel):
     omitted_flows: int = 0
     omitted_max_flows: int = 0
     omitted_max_dst_ports: int = 0
+    peers: dict[str, float] = {}           # medians over in-network sources: what 'typical' looks like
 
     def to_text(self) -> str:
         head = (f"WINDOW {self.window_start:%Y-%m-%d %H:%M}-{self.window_end:%H:%M} "
@@ -87,6 +88,9 @@ class WindowDigest(BaseModel):
                 f"dur_ms={e.mean_duration_ms:.1f} fwd_B={e.fwd_bytes} bwd_B={e.bwd_bytes} "
                 f"syn={e.syn} rst={e.rst} act_min={e.active_minutes} "
                 f"per_min={e.per_minute_mean:.1f} per_min_cv={e.per_minute_cv:.2f}")
+        peers = ""
+        if self.peers:
+            peers = "PEERS(in-network median) " + " ".join(f"{k}={v:g}" for k, v in self.peers.items())
         tail = (f"UNLISTED sources={self.omitted} flows={self.omitted_flows} "
                 f"max_flows_per_source={self.omitted_max_flows} max_dst_ports_per_source={self.omitted_max_dst_ports}")
-        return "\n".join([head, *rows, tail])
+        return "\n".join(x for x in [head, peers, *rows, tail] if x)
