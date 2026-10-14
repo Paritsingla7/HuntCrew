@@ -97,3 +97,33 @@ class WindowDigest(BaseModel):
         tail = (f"UNLISTED sources={self.omitted} flows={self.omitted_flows} "
                 f"max_flows_per_source={self.omitted_max_flows} max_dst_ports_per_source={self.omitted_max_dst_ports}")
         return "\n".join(x for x in [head, peers, *rows, tail] if x)
+
+
+class ProposedAction(BaseModel):
+    type: str                               # must be in the action catalog
+    target: str                             # ip, domain, host or free text depending on type
+    justification: str = ""
+    mitigation_id: str | None = None     # official ATT&CK mitigation this action implements
+
+
+class ResponsePlan(BaseModel):
+    incident_id: str
+    severity: str = "medium"                # low | medium | high | critical
+    risk_score: int = 50                    # 0-100
+    rationale: str = ""
+    actions: list[ProposedAction] = Field(default_factory=list)
+
+
+class ActionRecord(BaseModel):
+    action: ProposedAction
+    status: str                             # executed | denied | rejected
+    reason: str = ""
+    risk: str = ""
+
+
+class ActionLog(BaseModel):
+    incident_id: str
+    records: list[ActionRecord] = Field(default_factory=list)
+
+    def by_status(self, status: str) -> list[ActionRecord]:
+        return [r for r in self.records if r.status == status]
