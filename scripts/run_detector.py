@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from huntcrew import llm as llmmod  # noqa: E402
 from huntcrew.attack_kb import AttackKB, load_chunks  # noqa: E402
+from huntcrew.baselines import known_destinations  # noqa: E402
 from huntcrew.config import load_config  # noqa: E402
 from huntcrew.data_cic import load_cic  # noqa: E402
 from huntcrew.detector import merge_into_incidents, run_detector  # noqa: E402
@@ -32,7 +33,9 @@ def main() -> None:
     ap.add_argument("--windows", type=int, nargs="*")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--model")
-    ap.add_argument("--tag", default="agent")
+    ap.add_argument("--tag", default=None)
+    ap.add_argument("--mode", choices=["screen", "rules"], default="screen",
+                    help="screen = agent-led detection; rules = hybrid fallback (B0 rules propose, agent verifies)")
     a = ap.parse_args()
 
     cfg = load_config()
@@ -49,9 +52,11 @@ def main() -> None:
     kb = AttackKB(load_chunks(cfg["data"]["attack_stix"]), cfg["rag"]["embedding_model"], cfg["rag"]["persist_dir"])
     sl = data.select(pd.Timestamp(sl_cfg["start"]), pd.Timestamp(sl_cfg["end"]))
 
-    out = Path(".cache/runs") / f"{a.tag}_{a.split}_{a.name}.jsonl"
+    tag = a.tag or ("agent" if a.mode == "screen" else "hybrid")
+    out = Path(".cache/runs") / f"{tag}_{a.split}_{a.name}.jsonl"
+    known = known_destinations(data.select(pd.Timestamp(base["start"]), pd.Timestamp(base["end"])).flows)
     results = run_detector(sl.flows, sl_cfg["start"], sl_cfg["end"], cfg, kb, profile, llm, out, mw,
-                           only_windows=a.windows, limit=a.limit)
+                           only_windows=a.windows, limit=a.limit, candidates_from=a.mode, known_dsts=known)
 
     rp = Replay(sl.flows, sl_cfg["start"], sl_cfg["end"], cfg["replay"]["window_minutes"], cfg["replay"]["history_windows"])
     windows = rp.windows()

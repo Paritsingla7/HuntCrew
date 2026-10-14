@@ -22,6 +22,7 @@ import pandas as pd  # noqa: E402
 
 from .attack_kb import AttackKB  # noqa: E402
 from .detector_tools import DetectorContext, list_sources, search_attack_kb, source_profile  # noqa: E402
+from .digest import entity_stats  # noqa: E402
 from .evidence import verify_finding  # noqa: E402
 from .llm import Middleware  # noqa: E402
 from .profile import BaselineProfile  # noqa: E402
@@ -198,21 +199,40 @@ def screen_sources(ctx: DetectorContext, llm: Any, minutes: int) -> tuple[dict[s
     return flagged, failed
 
 
+def rule_candidates(ctx: DetectorContext, rules: dict, known_dsts: set[str] | None) -> dict[str, str]:
+    """Hybrid mode: the B0 rules propose candidate sources; the agent verifies them (ADR-019 fallback)."""
+    from .baselines import b0_findings
+
+    out: dict[str, str] = {}
+    for f in b0_findings(ctx.view.current(), ctx.window, rules, known_dsts):
+        out.setdefault(f.entity, f"rule fired: {f.behaviour}")
+    return out
+
+
 def detect_window(ctx: DetectorContext, llm: Any, known_ids: set[str], minutes: int, max_iter: int = 6,
-                  mw: Middleware | None = None) -> WindowResult:
+                  mw: Middleware | None = None, candidates_from: str = "screen",
+                  rules: dict | None = None, known_dsts: set[str] | None = None) -> WindowResult:
     before = mw.stats.snapshot() if mw else {}
     ctx.trace_start = len(ctx.kb.trace)
     res = WindowResult(window=ctx.window)
     if ctx.digest.total_flows == 0:
         return res
 
-    flagged, failed = screen_sources(ctx, llm, minutes)
+    if candidates_from == "rules":
+        flagged, failed = rule_candidates(ctx, rules or {}, known_dsts), False
+    else:
+        flagged, failed = screen_sources(ctx, llm, minutes)
     res.screened_unusual = sorted(flagged)
     res.parse_error = failed
     if flagged:
         cand = sorted(flagged)[:MAX_CANDIDATES]
         res.candidates_truncated = len(flagged) - len(cand)
         by_ent = {e.entity: e for e in ctx.digest.entities}
+        for c in cand:
+            if c not in by_ent:                      # a rule fired on a source the digest did not list
+                st = entity_stats(ctx.view.current(), c, ctx.window)
+                if st is not None:
+                    by_ent[c] = st
         peers = ("PEERS(in-network median) " + " ".join(f"{k}={v:g}" for k, v in ctx.digest.peers.items())
                  if ctx.digest.peers else "")
         rows = "\n".join(f"{by_ent[c].row()}  | screening note: {flagged[c]}" for c in cand if c in by_ent)
@@ -238,7 +258,8 @@ def detect_window(ctx: DetectorContext, llm: Any, known_ids: set[str], minutes: 
 
 def run_detector(flows: pd.DataFrame, start: str, end: str, cfg: dict, kb: AttackKB, profile: BaselineProfile,
                  llm: Any, out_path: str | Path, mw: Middleware | None = None,
-                 only_windows: Iterable[int] | None = None, limit: int | None = None) -> list[WindowResult]:
+                 only_windows: Iterable[int] | None = None, limit: int | None = None,
+                 candidates_from: str = "screen", known_dsts: set[str] | None = None) -> list[WindowResult]:
     """Replay [start, end) window by window. Results are appended to `out_path` (jsonl) so a run resumes."""
     from .digest import build_digest
 
@@ -271,7 +292,8 @@ def run_detector(flows: pd.DataFrame, start: str, end: str, cfg: dict, kb: Attac
             break
         dg = build_digest(view.current(), w, cfg["digest"]["max_private"], cfg["digest"]["public_top_k"])
         ctx = DetectorContext(window=w, view=view, digest=dg, kb=kb, profile=profile)
-        r = detect_window(ctx, llm, known, cfg["replay"]["window_minutes"], mw=mw)
+        r = detect_window(ctx, llm, known, cfg["replay"]["window_minutes"], mw=mw,
+                          candidates_from=candidates_from, rules=cfg.get("baseline_rules"), known_dsts=known_dsts)
         with out.open("a", encoding="utf-8") as f:
             f.write(json.dumps(r.to_json()) + "\n")
         results.append(r)
