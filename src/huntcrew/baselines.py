@@ -69,3 +69,38 @@ def b0_findings(current: pd.DataFrame, window: Window, rules: dict,
                                         {"flows": float(counts.sum()), "cv": float(round(cv, 3)),
                                          "dst_port": float(bport)}))
     return out
+
+
+B1_PROMPT = """You are a network security analyst. Below are statistics for ONE {minutes}-minute window of
+network flows ({label}). List the sources that look like attacks and, for each, the MITRE ATT&CK technique
+ID you believe applies (from your own knowledge). If nothing is suspicious return {{"findings": []}}.
+
+Answer with ONLY this JSON:
+{{"findings": [{{"entity": "<ip>", "behaviour": "<=20 words", "technique_hints": [{{"id": "T0000"}}],
+"confidence": 0.0}}]}}
+
+{digest}
+"""
+
+
+def b1_window(llm, digest_text: str, window: Window, minutes: int) -> list[Finding]:
+    """B1: one prompt, no tools, no retrieval, no baseline. Entities are not evidence-checked (it has none)."""
+    import json
+
+    text = str(llm.call([{"role": "user", "content": B1_PROMPT.format(
+        minutes=minutes, label=window.label(), digest=digest_text)}]))
+    i, j = text.find("{"), text.rfind("}")
+    try:
+        data = json.loads(text[i:j + 1]) if i >= 0 and j > i else {}
+    except json.JSONDecodeError:
+        return []
+    out: list[Finding] = []
+    for d in (data.get("findings") or [])[:8]:
+        if not isinstance(d, dict) or not d.get("entity"):
+            continue
+        hints = [TechniqueHint(id=str(h.get("id", "")).strip(), citation="b1-memory")
+                 for h in (d.get("technique_hints") or []) if isinstance(h, dict) and h.get("id")]
+        out.append(Finding(window_start=window.start, window_end=window.end, entity=str(d["entity"]),
+                           behaviour=str(d.get("behaviour", ""))[:200], technique_hints=hints,
+                           confidence=float(d.get("confidence", 0.5) or 0.5), suspicious=True))
+    return out

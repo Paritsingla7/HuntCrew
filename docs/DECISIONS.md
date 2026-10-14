@@ -140,3 +140,44 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   hosts and reply traffic of the attack itself.
 - **Consequences:** B0 is deliberately a *classic* rules engine; a heavily tuned rule set could do better.
   This is stated as a limitation, not hidden.
+
+## ADR-024 — Default model: `ministral-14b-latest`
+- **Status:** accepted (supersedes the `mistral-small-latest` default in ADR-004)
+- **Context:** probing the provider with tiny calls showed a request quota of 0 for `mistral-small*`,
+  `mistral-medium-latest` and `magistral-small-latest` on this key, while `ministral-3b/8b/14b`,
+  `open-mistral-nemo` and `codestral` work with much higher throughput than the dashboard figures for Small.
+- **Decision:** default to `ministral-14b-latest` (30 req/min, ~937k tokens/min); `ministral-8b-latest` is the
+  faster alternative. The model is configuration, so changing it needs no code edit.
+- **Consequences:** results are specific to this model class and must be reported with the model name;
+  response caching is keyed by model, so models never share cached answers.
+
+## ADR-025 — Detector runs in two stages: forced-coverage screening, then tool-based verification
+- **Status:** accepted
+- **Context:** with the whole digest in one prompt, ministral-14b anchored on the busiest or most diverse
+  sources (DNS-heavy workstations) and never opened the clearest anomaly (one source, one destination,
+  one port, 650 flows, per-minute CV 0.04). Reading its tool calls showed it simply did not consider the row.
+- **Decision:** stage 1 asks the model to judge **every** listed source against its peers in small chunks
+  (at most 3 flagged per chunk); stage 2 gives only flagged sources to the tool-using agent, which must return
+  an explicit verdict per candidate. Sources are listed in address order (not volume), a peers line gives
+  typical values, and neutral concentration features (`top_port_share`, `top_dst_share`) were added.
+- **Why:** forced coverage removes silent omission; an explicit verdict per candidate makes drops visible;
+  none of this adds thresholds or rules.
+- **Consequences:** ~15–20 LLM calls per window instead of ~4. All prompt iteration used the dev slice only.
+
+## ADR-026 — Hybrid fallback is implemented as a mode of the same detector
+- **Status:** accepted
+- **Decision:** `--mode rules` takes candidates from the frozen B0 rules instead of stage-1 screening and
+  runs the same verification stage, so the pre-registered fallback (ADR-019) is a one-flag change and both
+  systems are graded by the same code.
+
+## ADR-027 — Decision gate outcome: agent-led detection fails the bar; hybrid is the primary system
+- **Status:** accepted (evaluated on the dev slice only, 2026-10-15; bar fixed in ADR-019 before any result)
+- **Result:** B0 rules: recall 0.929, 35 false-positive (window, entity) pairs, precision 0.271.
+  Agent-led (`ministral-14b`, two-stage, after fixing an output-truncation bug): recall 0.643, 95 false
+  positives, precision 0.087, technique accuracy on true positives 0.33.
+- **Gate:** required recall ≥ 0.70 × 0.929 = 0.650 and false positives ≤ 2 × 35 = 70. Both missed (0.643 and 95).
+- **Decision:** the system under evaluation is the **hybrid** (rules propose candidates; the agent verifies,
+  dismisses and names them with RAG). The agent-led result is reported as a finding and stays in the table.
+- **Honest reading:** with a 14B-class model the agent over-flags busy-but-ordinary hosts; verification
+  against baselines and retrieval is where it earns its place, not first-pass detection.
+- **Not done:** no further prompt tuning to "pass" the gate. The test slices have not been used.

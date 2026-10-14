@@ -36,6 +36,14 @@ def is_private(ip: str) -> bool:
     return any(addr in net for net in _RFC1918)
 
 
+def _ip_key(ip: str) -> tuple[int, int]:
+    try:
+        a = ipaddress.ip_address(ip)
+        return (a.version, int(a))
+    except ValueError:
+        return (0, 0)
+
+
 def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
                  public_top_k: int = 6) -> WindowDigest:
     if flows.empty:
@@ -68,6 +76,10 @@ def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
 
     ports = df.groupby(["src_ip", "dst_port"]).size().rename("n").reset_index()
     ports = ports.sort_values(["src_ip", "n", "dst_port"], ascending=[True, False, True])
+    port_max = ports.groupby("src_ip")["n"].max()
+    dst_max = df.groupby(["src_ip", "dst_ip"]).size().groupby(level=0).max()
+    base["top_port_share"] = (port_max / base["flows"]).reindex(base.index).fillna(0.0)
+    base["top_dst_share"] = (dst_max / base["flows"]).reindex(base.index).fillna(0.0)
     top: dict[str, list[tuple[int, int]]] = {}
     for src, port, n in ports.groupby("src_ip").head(3).itertuples(index=False):
         top.setdefault(str(src), []).append((int(port), int(n)))
@@ -81,8 +93,14 @@ def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
     regular = public[public["active_minutes"] >= 3].nsmallest(public_top_k, "per_minute_cv", keep="first").index
     for idx in (*views, regular):
         chosen.extend(i for i in idx if i not in chosen)
-    shown = base.loc[chosen].sort_values("flows", ascending=False, kind="stable")
+    # neutral order (numeric by address), not by volume, so row position carries no signal
+    shown = base.loc[sorted(chosen, key=lambda i: _ip_key(str(i)))]
     rest = base.drop(index=shown.index)
+    peers: dict[str, float] = {}
+    if len(private):
+        peers = {"flows": float(private["flows"].median()), "dst_ips": float(private["dst_ips"].median()),
+                 "dst_ports": float(private["dst_ports"].median()),
+                 "per_min_cv": float(np.round(private["per_minute_cv"].median(), 2))}
     entities = [
         EntityStats(
             entity=str(ip), is_private=is_private(str(ip)), flows=int(r.flows), dst_ips=int(r.dst_ips),
@@ -90,6 +108,7 @@ def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
             mean_duration_ms=float(np.round(r.mean_duration_ms, 3)), fwd_bytes=int(r.fwd_bytes),
             bwd_bytes=int(r.bwd_bytes), syn=int(r.syn), rst=int(r.rst), active_minutes=int(r.active_minutes),
             per_minute_mean=float(np.round(r.per_minute_mean, 3)), per_minute_cv=float(np.round(r.per_minute_cv, 3)),
+            top_port_share=float(np.round(r.top_port_share, 3)), top_dst_share=float(np.round(r.top_dst_share, 3)),
         )
         for ip, r in shown.iterrows()
     ]
@@ -97,4 +116,13 @@ def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
                         sources=int(len(base)), entities=entities, omitted=int(len(rest)),
                         omitted_flows=int(rest["flows"].sum()) if len(rest) else 0,
                         omitted_max_flows=int(rest["flows"].max()) if len(rest) else 0,
-                        omitted_max_dst_ports=int(rest["dst_ports"].max()) if len(rest) else 0)
+                        omitted_max_dst_ports=int(rest["dst_ports"].max()) if len(rest) else 0,
+                        peers=peers)
+
+
+def entity_stats(flows: pd.DataFrame, ip: str, window: Window) -> EntityStats | None:
+    """Statistics for one source in `flows` (same arithmetic as the digest), or None if it is absent."""
+    sub = flows[flows["src_ip"] == ip]
+    if sub.empty:
+        return None
+    return build_digest(sub, window, max_private=1, public_top_k=1).entities[0]

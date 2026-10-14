@@ -2,6 +2,7 @@
 line-length = 120
 target-version = "py312"
 src = ["src", "tests", "scripts"]
+extend-exclude = ["*.ipynb"]   # generated notebook; cells use magics
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]

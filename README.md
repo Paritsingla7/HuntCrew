@@ -39,7 +39,9 @@ Why it is built this way:
 8. **Simulation only, human gate** for risky actions.
 
 ## Status
-Foundation (P1) done: data loader, config, schema, reproducible data fetch. See `docs/PROGRESS.md`.
+Data loader, replay simulator, digest, rules baseline, ATT&CK knowledge base, two-stage detector, response
+layer, downstream agents and graders are built and tested; evaluation runs are in progress.
+See `docs/PROGRESS.md` and `docs/ISSUES.md`.
 
 ## Quick start
 ```bash

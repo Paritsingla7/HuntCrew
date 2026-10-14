@@ -74,3 +74,45 @@ def score_findings(findings: Iterable[Finding], truth: pd.DataFrame, windows: li
         "technique_accuracy_on_tp": round(tech_ok / len(tp), 3) if tp else 0.0,
         "per_technique": dict(per_tech),
     }
+
+
+def grade_outcomes(outcomes: list, truth: pd.DataFrame, windows: list[Window], kb_ids: set[str]) -> dict:
+    """Incident-level grading of the full pipeline (technique naming, grounding, response quality).
+
+    An incident is *attack-linked* when at least one of its (window, entity) findings is attack-positive.
+    Technique accuracy is measured on attack-linked incidents only, at parent level.
+    """
+    starts = {pd.Timestamp(w.start): w.index for w in windows}
+    truth_tech: dict[tuple[int, str], set[str]] = defaultdict(set)
+    for r in truth.itertuples(index=False):
+        truth_tech[(int(cast(int, r.window_index)), str(r.entity))].add(str(r.technique))
+
+    linked = correct = 0
+    cited = grounded = 0
+    actions = executed_or_denied = with_mitigation = 0
+    for o in outcomes:
+        keys = {(starts.get(pd.Timestamp(f.window_start), -1), f.entity) for f in o.incident.findings}
+        want: set[str] = set()
+        for k in keys:
+            want |= truth_tech.get(k, set())
+        if want:
+            linked += 1
+            got = {parent(t.id) for t in o.assessment.techniques}
+            correct += int(bool(got & want))
+        n_ok, n_drop = len(o.assessment.techniques), len(o.assessment.dropped_ids)
+        cited += n_ok + n_drop
+        grounded += sum(1 for t in o.assessment.techniques if t.id in kb_ids)
+        for r in o.log.records:
+            actions += 1
+            executed_or_denied += int(r.status != "rejected")
+            with_mitigation += int(r.action.mitigation_id is not None)
+        actions += len(o.guard.dropped_actions)               # unknown action types never reach the executor
+    return {
+        "incidents": len(outcomes), "attack_linked_incidents": linked,
+        "incident_precision": round(linked / len(outcomes), 3) if outcomes else 0.0,
+        "technique_accuracy_incident": round(correct / linked, 3) if linked else 0.0,
+        "grounding_rate": round(grounded / cited, 3) if cited else 1.0,
+        "policy_pass_rate": round(executed_or_denied / actions, 3) if actions else 1.0,
+        "mitigation_grounded_share": round(with_mitigation / actions, 3) if actions else 0.0,
+        "proposed_actions": actions,
+    }
