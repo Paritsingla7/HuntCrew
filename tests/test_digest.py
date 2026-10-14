@@ -1,5 +1,4 @@
 import pandas as pd
-import pytest
 
 from huntcrew.digest import build_digest, is_private
 from huntcrew.replay import Window

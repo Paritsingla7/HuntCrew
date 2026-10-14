@@ -8,3 +8,11 @@ llm_cache/
 .env
 .ipynb_checkpoints/
 data/external/
+
+# code-graph / assistant context files generated locally; never committed
+.gitnexus/
+CLAUDE.md
+AGENTS.md
+.claude/
+.mypy_cache/
+.ruff_cache/

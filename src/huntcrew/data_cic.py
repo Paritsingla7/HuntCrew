@@ -7,9 +7,9 @@ Two things matter here:
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
 
 import pandas as pd
 
@@ -60,19 +60,19 @@ class CicData:
     def __len__(self) -> int:
         return len(self.flows)
 
-    def select(self, start: pd.Timestamp, end: pd.Timestamp) -> "CicData":
+    def select(self, start: pd.Timestamp, end: pd.Timestamp) -> CicData:
         """Time slice [start, end). Index is reset so downstream code can't rely on global row ids."""
         m = (self.flows["ts"] >= start) & (self.flows["ts"] < end)
         flows = self.flows.loc[m].reset_index(drop=True)
         labels = self.labels.loc[m].reset_index(drop=True)
         return CicData(flows, labels)
 
-    def keep_labels(self, labels: Iterable[str]) -> "CicData":
+    def keep_labels(self, labels: Iterable[str]) -> CicData:
         m = self.labels.isin(set(labels))
         return CicData(self.flows.loc[m].reset_index(drop=True), self.labels.loc[m].reset_index(drop=True))
 
 
-def load_cic(path: str | Path, columns: Optional[dict[str, str]] = None) -> CicData:
+def load_cic(path: str | Path, columns: dict[str, str] | None = None) -> CicData:
     cmap = columns or COLUMN_MAP
     df = pd.read_parquet(path, columns=[*cmap.keys(), LABEL_COLUMN])
     df = df.rename(columns=cmap)

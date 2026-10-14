@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -38,7 +37,7 @@ class GroundTruthSpan(BaseModel):
     """Derived from the dataset labels by the grader only. Agents never see this."""
 
     label: str
-    technique_id: Optional[str]     # via config labels.to_technique
+    technique_id: str | None     # via config labels.to_technique
     entity_src: str
     start: datetime
     end: datetime

@@ -14,7 +14,7 @@ The agent's tools can query any source individually, so the digest is a starting
 from __future__ import annotations
 
 import ipaddress
-from functools import lru_cache
+from functools import cache
 
 import numpy as np
 import pandas as pd
@@ -22,11 +22,10 @@ import pandas as pd
 from .replay import Window
 from .schema import EntityStats, WindowDigest
 
-
 _RFC1918 = [ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")]
 
 
-@lru_cache(maxsize=None)
+@cache
 def is_private(ip: str) -> bool:
     """RFC 1918 address (an in-network host). Deliberately narrower than ipaddress.is_private,
     which also covers loopback, link-local and documentation ranges."""
@@ -69,8 +68,9 @@ def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
 
     ports = df.groupby(["src_ip", "dst_port"]).size().rename("n").reset_index()
     ports = ports.sort_values(["src_ip", "n", "dst_port"], ascending=[True, False, True])
-    top = ports.groupby("src_ip").head(3).groupby("src_ip").apply(
-        lambda x: list(zip(x["dst_port"].astype(int), x["n"].astype(int))), include_groups=False)
+    top: dict[str, list[tuple[int, int]]] = {}
+    for src, port, n in ports.groupby("src_ip").head(3).itertuples(index=False):
+        top.setdefault(str(src), []).append((int(port), int(n)))
 
     base = base.sort_values("flows", ascending=False, kind="stable")
     private = base[[is_private(str(i)) for i in base.index]]
@@ -86,7 +86,7 @@ def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
     entities = [
         EntityStats(
             entity=str(ip), is_private=is_private(str(ip)), flows=int(r.flows), dst_ips=int(r.dst_ips),
-            dst_ports=int(r.dst_ports), top_ports=top.get(ip, []), ext_dst_ips=int(r.ext_dst_ips),
+            dst_ports=int(r.dst_ports), top_ports=top.get(str(ip), []), ext_dst_ips=int(r.ext_dst_ips),
             mean_duration_ms=float(np.round(r.mean_duration_ms, 3)), fwd_bytes=int(r.fwd_bytes),
             bwd_bytes=int(r.bwd_bytes), syn=int(r.syn), rst=int(r.rst), active_minutes=int(r.active_minutes),
             per_minute_mean=float(np.round(r.per_minute_mean, 3)), per_minute_cv=float(np.round(r.per_minute_cv, 3)),
