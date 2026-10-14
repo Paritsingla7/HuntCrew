@@ -62,6 +62,17 @@ class EntityStats(BaseModel):
     active_minutes: int
     per_minute_mean: float
     per_minute_cv: float                   # 0 = perfectly regular; undefined (0.0) with <2 active minutes
+    top_port_share: float = 0.0            # share of this source's flows that hit its most common port
+    top_dst_share: float = 0.0             # share of this source's flows that hit its most common destination
+
+    def row(self) -> str:
+        ports = ",".join(f"{p}:{n}" for p, n in self.top_ports)
+        return (f"src={self.entity} priv={int(self.is_private)} flows={self.flows} dst_ips={self.dst_ips} "
+                f"dst_ports={self.dst_ports} top_ports={ports} top_port_share={self.top_port_share:.2f} "
+                f"top_dst_share={self.top_dst_share:.2f} ext_dst={self.ext_dst_ips} "
+                f"dur_ms={self.mean_duration_ms:.1f} fwd_B={self.fwd_bytes} bwd_B={self.bwd_bytes} "
+                f"syn={self.syn} rst={self.rst} act_min={self.active_minutes} "
+                f"per_min={self.per_minute_mean:.1f} per_min_cv={self.per_minute_cv:.2f}")
 
 
 class WindowDigest(BaseModel):
@@ -79,15 +90,7 @@ class WindowDigest(BaseModel):
     def to_text(self) -> str:
         head = (f"WINDOW {self.window_start:%Y-%m-%d %H:%M}-{self.window_end:%H:%M} "
                 f"flows={self.total_flows} sources={self.sources}")
-        rows = []
-        for e in self.entities:
-            ports = ",".join(f"{p}:{n}" for p, n in e.top_ports)
-            rows.append(
-                f"src={e.entity} priv={int(e.is_private)} flows={e.flows} dst_ips={e.dst_ips} "
-                f"dst_ports={e.dst_ports} top_ports={ports} ext_dst={e.ext_dst_ips} "
-                f"dur_ms={e.mean_duration_ms:.1f} fwd_B={e.fwd_bytes} bwd_B={e.bwd_bytes} "
-                f"syn={e.syn} rst={e.rst} act_min={e.active_minutes} "
-                f"per_min={e.per_minute_mean:.1f} per_min_cv={e.per_minute_cv:.2f}")
+        rows = [e.row() for e in self.entities]
         peers = ""
         if self.peers:
             peers = "PEERS(in-network median) " + " ".join(f"{k}={v:g}" for k, v in self.peers.items())

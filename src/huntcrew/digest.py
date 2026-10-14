@@ -76,6 +76,10 @@ def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
 
     ports = df.groupby(["src_ip", "dst_port"]).size().rename("n").reset_index()
     ports = ports.sort_values(["src_ip", "n", "dst_port"], ascending=[True, False, True])
+    port_max = ports.groupby("src_ip")["n"].max()
+    dst_max = df.groupby(["src_ip", "dst_ip"]).size().groupby(level=0).max()
+    base["top_port_share"] = (port_max / base["flows"]).reindex(base.index).fillna(0.0)
+    base["top_dst_share"] = (dst_max / base["flows"]).reindex(base.index).fillna(0.0)
     top: dict[str, list[tuple[int, int]]] = {}
     for src, port, n in ports.groupby("src_ip").head(3).itertuples(index=False):
         top.setdefault(str(src), []).append((int(port), int(n)))
@@ -104,6 +108,7 @@ def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
             mean_duration_ms=float(np.round(r.mean_duration_ms, 3)), fwd_bytes=int(r.fwd_bytes),
             bwd_bytes=int(r.bwd_bytes), syn=int(r.syn), rst=int(r.rst), active_minutes=int(r.active_minutes),
             per_minute_mean=float(np.round(r.per_minute_mean, 3)), per_minute_cv=float(np.round(r.per_minute_cv, 3)),
+            top_port_share=float(np.round(r.top_port_share, 3)), top_dst_share=float(np.round(r.top_dst_share, 3)),
         )
         for ip, r in shown.iterrows()
     ]

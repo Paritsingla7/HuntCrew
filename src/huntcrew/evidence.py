@@ -12,7 +12,7 @@ from .digest import entity_stats
 from .schema import Finding, TechniqueHint
 
 CHECKABLE = ("flows", "dst_ips", "dst_ports", "ext_dst_ips", "fwd_bytes", "bwd_bytes", "syn", "rst",
-             "active_minutes", "per_minute_mean", "per_minute_cv", "mean_duration_ms")
+             "active_minutes", "per_minute_mean", "per_minute_cv", "mean_duration_ms", "top_port_share", "top_dst_share")
 
 
 @dataclass
