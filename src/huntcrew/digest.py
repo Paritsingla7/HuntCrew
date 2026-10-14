@@ -98,3 +98,11 @@ def build_digest(flows: pd.DataFrame, window: Window, max_private: int = 40,
                         omitted_flows=int(rest["flows"].sum()) if len(rest) else 0,
                         omitted_max_flows=int(rest["flows"].max()) if len(rest) else 0,
                         omitted_max_dst_ports=int(rest["dst_ports"].max()) if len(rest) else 0)
+
+
+def entity_stats(flows: pd.DataFrame, ip: str, window: Window) -> EntityStats | None:
+    """Statistics for one source in `flows` (same arithmetic as the digest), or None if it is absent."""
+    sub = flows[flows["src_ip"] == ip]
+    if sub.empty:
+        return None
+    return build_digest(sub, window, max_private=1, public_top_k=1).entities[0]
