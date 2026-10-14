@@ -116,3 +116,27 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 - **Context:** in ATT&CK v20 the legacy detection text is gone; guidance lives in `x-mitre-detection-strategy`
   and `x-mitre-analytic` objects linked by `detects` relationships.
 - **Decision:** one chunk per technique/sub-technique, joined with its mitigations and detection analytics.
+
+## ADR-022 — Digest listing is structured, not a single top-N
+- **Status:** accepted
+- **Context:** a 5-minute CIC-IDS2017 window holds ~300–550 distinct sources (≈13 internal hosts, the rest
+  public addresses with 1–3 flows). A single top-N-by-volume cut silently drops ~80% of sources and would
+  hide low-and-slow behaviour.
+- **Decision:** list every private source; list public sources that lead in any of several neutral views
+  (flows, distinct ports, distinct destinations, outbound bytes, most regular timing); summarise the rest
+  with explicit counts. The structure was chosen from benign Monday traffic and general reasoning, not from
+  attack labels. Coverage of attack entities in test windows is reported afterwards, not tuned on.
+- **Consequences:** ~1.7k tokens per window; the detector's tools can still query any source.
+
+## ADR-023 — B0 baseline refined on benign/dev data only, then frozen
+- **Status:** accepted
+- **Context:** the first B0 had two real rule defects (counted a server's replies as "port scanning";
+  flagged any regular HTTPS as beaconing).
+- **Decision:** port-scan rule counts distinct ports per (source, destination) pair; beaconing requires a
+  destination never seen in the benign baseline. Both refinements used only the Monday baseline and the dev
+  slice (ADR-019). B0 is then frozen.
+- **Result on dev (FTP-Patator, 21 windows):** before: 64 predicted / 13 TP / 51 FP (P 0.20, R 0.93);
+  after: 48 predicted / 13 TP / 35 FP (P 0.27, R 0.93). Remaining FPs are regular HTTPS to unlisted external
+  hosts and reply traffic of the attack itself.
+- **Consequences:** B0 is deliberately a *classic* rules engine; a heavily tuned rule set could do better.
+  This is stated as a limitation, not hidden.
