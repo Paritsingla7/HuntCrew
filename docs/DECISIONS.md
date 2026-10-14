@@ -140,3 +140,13 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   hosts and reply traffic of the attack itself.
 - **Consequences:** B0 is deliberately a *classic* rules engine; a heavily tuned rule set could do better.
   This is stated as a limitation, not hidden.
+
+## ADR-024 — Default model: `ministral-14b-latest`
+- **Status:** accepted (supersedes the `mistral-small-latest` default in ADR-004)
+- **Context:** probing the provider with tiny calls showed a request quota of 0 for `mistral-small*`,
+  `mistral-medium-latest` and `magistral-small-latest` on this key, while `ministral-3b/8b/14b`,
+  `open-mistral-nemo` and `codestral` work with much higher throughput than the dashboard figures for Small.
+- **Decision:** default to `ministral-14b-latest` (30 req/min, ~937k tokens/min); `ministral-8b-latest` is the
+  faster alternative. The model is configuration, so changing it needs no code edit.
+- **Consequences:** results are specific to this model class and must be reported with the model name;
+  response caching is keyed by model, so models never share cached answers.
