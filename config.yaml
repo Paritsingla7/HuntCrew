@@ -3,8 +3,10 @@
 llm:
   model: mistral/mistral-small-latest   # LiteLLM model string; key from env MISTRAL_API_KEY
   temperature: 0.0
+  max_tokens: 700
   max_retries: 5
-  min_interval_s: 1.2                   # throttle: free tier is ~1 request/second (community-observed, verify)
+  min_interval_s: 1.2                   # provider limit for this model: 1 request/second (verified in dashboard)
+  tokens_per_minute: 16000              # provider limit is 20,000/min for mistral-small-2603; keep headroom
   cache_dir: .cache/llm
 
 rag:
