@@ -43,3 +43,51 @@ class GroundTruthSpan(BaseModel):
     start: datetime
     end: datetime
     flows: int
+
+
+class EntityStats(BaseModel):
+    """Plain statistics for one source address in one window. No judgement, no thresholds."""
+
+    entity: str
+    is_private: bool
+    flows: int
+    dst_ips: int
+    dst_ports: int
+    top_ports: list[tuple[int, int]]       # (port, flows), at most 3
+    ext_dst_ips: int                       # distinct non-private destinations
+    mean_duration_ms: float
+    fwd_bytes: int
+    bwd_bytes: int
+    syn: int
+    rst: int
+    active_minutes: int
+    per_minute_mean: float
+    per_minute_cv: float                   # 0 = perfectly regular; undefined (0.0) with <2 active minutes
+
+
+class WindowDigest(BaseModel):
+    window_start: datetime
+    window_end: datetime
+    total_flows: int
+    sources: int
+    entities: list[EntityStats]
+    omitted: int = 0                       # sources not listed individually
+    omitted_flows: int = 0
+    omitted_max_flows: int = 0
+    omitted_max_dst_ports: int = 0
+
+    def to_text(self) -> str:
+        head = (f"WINDOW {self.window_start:%Y-%m-%d %H:%M}-{self.window_end:%H:%M} "
+                f"flows={self.total_flows} sources={self.sources}")
+        rows = []
+        for e in self.entities:
+            ports = ",".join(f"{p}:{n}" for p, n in e.top_ports)
+            rows.append(
+                f"src={e.entity} priv={int(e.is_private)} flows={e.flows} dst_ips={e.dst_ips} "
+                f"dst_ports={e.dst_ports} top_ports={ports} ext_dst={e.ext_dst_ips} "
+                f"dur_ms={e.mean_duration_ms:.1f} fwd_B={e.fwd_bytes} bwd_B={e.bwd_bytes} "
+                f"syn={e.syn} rst={e.rst} act_min={e.active_minutes} "
+                f"per_min={e.per_minute_mean:.1f} per_min_cv={e.per_minute_cv:.2f}")
+        tail = (f"UNLISTED sources={self.omitted} flows={self.omitted_flows} "
+                f"max_flows_per_source={self.omitted_max_flows} max_dst_ports_per_source={self.omitted_max_dst_ports}")
+        return "\n".join([head, *rows, tail])
