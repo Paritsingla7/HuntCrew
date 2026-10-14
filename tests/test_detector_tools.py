@@ -136,3 +136,10 @@ def test_merge_into_incidents_joins_adjacent_windows_only():
     inc = merge_into_incidents([f("A", 0), f("A", 5), f("A", 10), f("A", 40), f("B", 5)], 5)
     spans = sorted((i.entity, len(i.findings)) for i in inc)
     assert spans == [("A", 1), ("A", 3), ("B", 1)]
+
+
+def test_verdict_parser_returns_only_confirmed_attacks():
+    from huntcrew.detector import parse_findings_json
+    text = '{"verdicts": [{"entity": "A", "attack": true}, {"entity": "B", "attack": false}]}'
+    assert [x["entity"] for x in parse_findings_json(text) or []] == ["A"]
+    assert parse_findings_json('{"findings": [{"entity": "C"}]}') == [{"entity": "C"}]

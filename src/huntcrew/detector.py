@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -33,7 +34,8 @@ For EACH source below decide whether it is doing something its peers are not doi
 Look at: how many destinations and ports it uses, how concentrated its traffic is on one port or one
 destination (top_port_share, top_dst_share), how regular its timing is (per_min_cv), and how much data
 moves. Ordinary clients and servers are the majority; mark a source unusual only if its pattern differs
-clearly from its peers. Volume alone is not enough.
+clearly from its peers. Volume alone is not enough. Mark at most 3 sources in this list as unusual:
+the ones that deviate most from their peers.
 
 Return ONLY this JSON, one entry per source, same order:
 {{"sources": [{{"entity": "<ip>", "unusual": false, "why": "<=15 words"}}]}}
@@ -55,14 +57,17 @@ Method:
    candidate only if a retrieved ATT&CK technique genuinely matches the behaviour. Volume alone is not
    an attack, and a destination never seen in the baseline is common for ordinary browsing.
 3. Only quote numbers that appear in the rows above or in tool outputs. Only cite technique IDs returned
-   by search_attack_kb. Drop candidates that turn out to be ordinary.
+   by search_attack_kb.
+4. You MUST give a verdict for EVERY candidate listed, including the ones you reject.
 
 Allowed evidence metric names: flows, dst_ips, dst_ports, ext_dst_ips, fwd_bytes, bwd_bytes, syn, rst,
 active_minutes, per_minute_mean, per_minute_cv, mean_duration_ms, top_port_share, top_dst_share.
 
-Final answer must be ONLY this JSON (no prose); return {{"findings": []}} if none is confirmed:
-{{"findings": [{{"entity": "<source ip>", "behaviour": "<=25 words", "evidence": {{"flows": 0}},
-"technique_hints": [{{"id": "T0000", "citation": "T0000"}}], "confidence": 0.0}}]}}
+Final answer must be ONLY this JSON (no prose), one entry per candidate:
+{{"verdicts": [{{"entity": "<source ip>", "attack": true, "behaviour": "<=25 words",
+"evidence": {{"flows": 0}}, "technique_hints": [{{"id": "T0000", "citation": "T0000"}}],
+"confidence": 0.0}}]}}
+For a rejected candidate use "attack": false and a short behaviour note; evidence may be empty.
 """
 
 MAX_CANDIDATES = 8
@@ -80,13 +85,15 @@ class WindowResult:
     usage: dict[str, float] = field(default_factory=dict)
     screened_unusual: list[str] = field(default_factory=list)
     candidates_truncated: int = 0
+    verdicts_missing: int = 0
 
     def to_json(self) -> dict[str, Any]:
         return {"index": self.window.index, "start": str(self.window.start), "end": str(self.window.end),
                 "findings": [f.model_dump(mode="json") for f in self.findings], "rejected": self.rejected,
                 "dropped_hints": self.dropped_hints, "parse_error": self.parse_error,
                 "raw": self.raw[:2000], "usage": self.usage,
-                "screened_unusual": self.screened_unusual, "candidates_truncated": self.candidates_truncated}
+                "screened_unusual": self.screened_unusual, "candidates_truncated": self.candidates_truncated,
+                "verdicts_missing": self.verdicts_missing}
 
 
 def parse_findings_json(text: str) -> list[dict] | None:
@@ -100,7 +107,11 @@ def parse_findings_json(text: str) -> list[dict] | None:
         data = json.loads(text[i:j + 1])
     except json.JSONDecodeError:
         return None
-    items = data.get("findings") if isinstance(data, dict) else None
+    if not isinstance(data, dict):
+        return None
+    if isinstance(data.get("verdicts"), list):
+        return [x for x in data["verdicts"] if isinstance(x, dict) and x.get("attack") is True]
+    items = data.get("findings")
     if not isinstance(items, list):
         return None
     return [x for x in items if isinstance(x, dict)]
@@ -208,6 +219,7 @@ def detect_window(ctx: DetectorContext, llm: Any, known_ids: set[str], minutes: 
         prompt = VERIFY_TEMPLATE.format(minutes=minutes, label=ctx.window.label(), peers=peers, rows=rows)
         raw = _run_agent(llm, build_tools(ctx), prompt, max_iter)
         res.raw = raw
+        res.verdicts_missing = max(0, len(cand) - len(re.findall(r'"entity"', raw)))
         items = parse_findings_json(raw)
         if items is None:
             res.parse_error = True
@@ -252,7 +264,8 @@ def run_detector(flows: pd.DataFrame, start: str, end: str, cfg: dict, kb: Attac
                                         rejected=d["rejected"], dropped_hints=d["dropped_hints"],
                                         parse_error=d["parse_error"], raw=d.get("raw", ""), usage=d["usage"],
                                         screened_unusual=d.get("screened_unusual", []),
-                                        candidates_truncated=d.get("candidates_truncated", 0)))
+                                        candidates_truncated=d.get("candidates_truncated", 0),
+                                        verdicts_missing=d.get("verdicts_missing", 0)))
             continue
         if limit is not None and processed >= limit:
             break
