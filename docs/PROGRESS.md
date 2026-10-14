@@ -10,6 +10,21 @@ Newest entry on top.
 - Tests: 34 passing (first run downloads the embedding model, ~1 min).
 - Next: P4 detector agent (needs the provider API key and limits).
 
+## 2026-10-15 (late night) — P4/P5 build-out, gate pending
+- LLM middleware: throttle, token budget, completion-level response cache, retries; strips prompt-caching
+  hints that the provider rejects (I-010).
+- Measured provider quotas through response headers: `mistral-small*`/`medium`/`magistral-small` have a
+  quota of 0 on this key; default model is `ministral-14b-latest` (ADR-024, I-011).
+- Detector: first single-pass design anchored on busy hosts and never opened the clearest anomaly.
+  Redesigned as two stages (ADR-025): forced-coverage screening of every listed source, then tool-based
+  verification with an explicit verdict per candidate. Hybrid fallback is a mode of the same detector (ADR-026).
+- First full dev run of the agent-led detector: recall 0.36, precision 0.07 (vs B0 0.93 / 0.27). 8 of 21
+  windows had parse errors caused by output truncation; fixed (larger budget, shorter format, salvage parser)
+  and re-running before the gate is evaluated.
+- Built: response layer (policy, simulated environment, approval gate, executor), downstream agents with code
+  guardrails, pipeline, incident-level graders, B1 baseline, one-command evaluation runner, notebook builder.
+- Tests: 69 passing; ruff and mypy clean.
+
 ## 2026-10-15 (evening) — P2 Replay, digest, B0 baseline
 - Replay clock with bounded history and a no-future guard; refuses flows that carry label columns.
 - Digest: statistics only, no thresholds, no verdict words (tested). Real-data check showed ~300–550 sources
@@ -45,8 +60,8 @@ Newest entry on top.
 | P1 Foundation | ✅ done |
 | P2 Replay + digest + B0 | ✅ done |
 | P3 Knowledge base | ✅ done |
-| P4 Detector agent | ⬜ |
-| P5 Downstream crew + response | ⬜ |
+| P4 Detector agent | 🔄 built, gate pending |
+| P5 Downstream crew + response | ✅ built (live run pending) |
 | P6 Evaluation | ⬜ |
 | P7 Colab | ⬜ |
 | P8 Polish | ⬜ |
