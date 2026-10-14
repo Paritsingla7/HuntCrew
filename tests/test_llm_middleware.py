@@ -124,3 +124,14 @@ def test_load_dotenv_does_not_override_existing(tmp_path, monkeypatch):
     assert os.environ["HC_TEST_A"] == "already" and os.environ["HC_TEST_B"] == "2"
     monkeypatch.delenv("HC_TEST_B", raising=False)
     assert load_dotenv(tmp_path / "missing") is False
+
+
+def test_unsupported_caching_hints_are_stripped_before_the_provider(tmp_path):
+    clock, seen = FakeClock(), []
+    mw = _mw(clock, cache_dir=tmp_path, min_interval_s=0)
+    fn = mw.wrap(lambda **kw: seen.append(kw) or _resp(), _make_response)
+    fn(model="m", messages=[{"role": "system", "content": "s", "cache_breakpoint": True},
+                            {"role": "user", "content": [{"type": "text", "text": "t", "cache_control": {}}]}])
+    sent = seen[0]["messages"]
+    assert "cache_breakpoint" not in sent[0]
+    assert sent[1]["content"][0] == {"type": "text", "text": "t"}

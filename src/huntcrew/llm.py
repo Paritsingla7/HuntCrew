@@ -58,6 +58,18 @@ class LLMStats:
         return {k: round(now[k] - before.get(k, 0), 1) for k in now}
 
 
+_UNSUPPORTED_MESSAGE_KEYS = {"cache_breakpoint", "cache_control"}
+
+
+def sanitize_messages(obj: Any) -> Any:
+    """Drop client-side prompt-caching hints that CrewAI adds but the Mistral API rejects."""
+    if isinstance(obj, dict):
+        return {k: sanitize_messages(v) for k, v in obj.items() if k not in _UNSUPPORTED_MESSAGE_KEYS}
+    if isinstance(obj, list):
+        return [sanitize_messages(x) for x in obj]
+    return obj
+
+
 def _estimate_tokens(kwargs: dict[str, Any]) -> int:
     text = json.dumps(kwargs.get("messages", []), default=str) + json.dumps(kwargs.get("tools", []), default=str)
     return int(len(text) / 3.2) + int(kwargs.get("max_tokens") or 500)
@@ -137,6 +149,8 @@ class Middleware:
         def wrapped(*args: Any, **kwargs: Any) -> Any:
             if args or kwargs.get("stream"):
                 return completion(*args, **kwargs)           # streaming/positional: pass through untouched
+            if "messages" in kwargs:
+                kwargs = {**kwargs, "messages": sanitize_messages(kwargs["messages"])}
             key = _cache_key(kwargs)
             hit = self._cache_get(key)
             if hit is not None:
