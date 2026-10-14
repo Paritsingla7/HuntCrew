@@ -169,3 +169,15 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 - **Decision:** `--mode rules` takes candidates from the frozen B0 rules instead of stage-1 screening and
   runs the same verification stage, so the pre-registered fallback (ADR-019) is a one-flag change and both
   systems are graded by the same code.
+
+## ADR-027 — Decision gate outcome: agent-led detection fails the bar; hybrid is the primary system
+- **Status:** accepted (evaluated on the dev slice only, 2026-10-15; bar fixed in ADR-019 before any result)
+- **Result:** B0 rules: recall 0.929, 35 false-positive (window, entity) pairs, precision 0.271.
+  Agent-led (`ministral-14b`, two-stage, after fixing an output-truncation bug): recall 0.643, 95 false
+  positives, precision 0.087, technique accuracy on true positives 0.33.
+- **Gate:** required recall ≥ 0.70 × 0.929 = 0.650 and false positives ≤ 2 × 35 = 70. Both missed (0.643 and 95).
+- **Decision:** the system under evaluation is the **hybrid** (rules propose candidates; the agent verifies,
+  dismisses and names them with RAG). The agent-led result is reported as a finding and stays in the table.
+- **Honest reading:** with a 14B-class model the agent over-flags busy-but-ordinary hosts; verification
+  against baselines and retrieval is where it earns its place, not first-pass detection.
+- **Not done:** no further prompt tuning to "pass" the gate. The test slices have not been used.
