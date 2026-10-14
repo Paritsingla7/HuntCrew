@@ -17,6 +17,10 @@ data:
   attack_stix: data/external/attack-stix/enterprise-attack.json
   policy: data/policy/policy.json
 
+digest:
+  max_private: 40              # every in-network source is listed up to this cap
+  public_top_k: 6              # per neutral view (flows, ports, destinations, bytes, regularity)
+
 replay:
   window_minutes: 5
   history_windows: 12          # how far back the agent's tools may look; never forward
@@ -44,12 +48,17 @@ splits:
     - {name: portscan,    start: "2017-07-07 14:00", end: "2017-07-07 15:30"}
 
 # B0 baseline only (a classic rules engine). The agent detector does NOT use these.
-baseline_rules:
-  password_guessing: {min_flows: 50, window_s: 300, ports: [21, 22]}
-  port_scan: {min_distinct_ports: 100, window_s: 300}
-  beaconing: {min_flows: 10, max_cv: 0.3}
+baseline_rules:                # evaluated per replay window
+  password_guessing: {min_flows: 50, ports: [21, 22]}
+  port_scan: {min_distinct_ports: 100}
+  beaconing: {min_flows: 10, min_active_minutes: 3, max_cv: 0.3}
 
 # Pre-registered bar for "agent detector is usable" (ADR-019). If missed -> B2-hybrid.
 decision_gate:
   min_recall_vs_b0: 0.70       # agent recall >= 70% of B0 recall on dev
   max_fp_ratio_vs_b0: 2.0      # agent false-positive incidents <= 2x B0's
+
+# Fixed before any detector result existed. A (window, entity) is attack-positive when it has at least
+# this many attack-labelled flows from that source in the window.
+grading:
+  min_attack_flows: 5
