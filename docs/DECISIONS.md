@@ -150,3 +150,22 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   faster alternative. The model is configuration, so changing it needs no code edit.
 - **Consequences:** results are specific to this model class and must be reported with the model name;
   response caching is keyed by model, so models never share cached answers.
+
+## ADR-025 — Detector runs in two stages: forced-coverage screening, then tool-based verification
+- **Status:** accepted
+- **Context:** with the whole digest in one prompt, ministral-14b anchored on the busiest or most diverse
+  sources (DNS-heavy workstations) and never opened the clearest anomaly (one source, one destination,
+  one port, 650 flows, per-minute CV 0.04). Reading its tool calls showed it simply did not consider the row.
+- **Decision:** stage 1 asks the model to judge **every** listed source against its peers in small chunks
+  (at most 3 flagged per chunk); stage 2 gives only flagged sources to the tool-using agent, which must return
+  an explicit verdict per candidate. Sources are listed in address order (not volume), a peers line gives
+  typical values, and neutral concentration features (`top_port_share`, `top_dst_share`) were added.
+- **Why:** forced coverage removes silent omission; an explicit verdict per candidate makes drops visible;
+  none of this adds thresholds or rules.
+- **Consequences:** ~15–20 LLM calls per window instead of ~4. All prompt iteration used the dev slice only.
+
+## ADR-026 — Hybrid fallback is implemented as a mode of the same detector
+- **Status:** accepted
+- **Decision:** `--mode rules` takes candidates from the frozen B0 rules instead of stage-1 screening and
+  runs the same verification stage, so the pre-registered fallback (ADR-019) is a one-flag change and both
+  systems are graded by the same code.
