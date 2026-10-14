@@ -84,5 +84,5 @@ def test_retrieval_hit_rates(kb):
     hit3 = sum(r is not None and r <= 3 for r in ranks) / n
     hit5 = sum(r is not None for r in ranks) / n
     print(f"\nretrieval hit@1={hit1:.2f} hit@3={hit3:.2f} hit@5={hit5:.2f}")
-    misses = [(q, e) for (q, e), r in zip(QUERIES, ranks) if r is None]
+    misses = [(q, e) for (q, e), r in zip(QUERIES, ranks, strict=False) if r is None]
     assert hit5 >= 0.85, f"hit@5={hit5:.2f}; misses: {misses}"

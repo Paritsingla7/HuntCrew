@@ -20,7 +20,7 @@ def test_splits_do_not_overlap_and_are_ordered():
     for name, a, b in spans:
         assert a < b, name
     spans.sort(key=lambda x: x[1])
-    for (n1, _, e1), (n2, s2, _) in zip(spans, spans[1:]):
+    for (n1, _, e1), (n2, s2, _) in zip(spans, spans[1:], strict=False):
         assert e1 <= s2, f"{n1} overlaps {n2}"
 
 
