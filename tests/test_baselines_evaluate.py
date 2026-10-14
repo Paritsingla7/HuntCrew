@@ -30,6 +30,19 @@ def test_port_scan_rule_counts_distinct_ports():
     assert [x.technique_hints[0].id for x in f] == ["T1046"]
 
 
+def test_port_scan_ignores_server_replying_to_many_clients():
+    # one source, many different destinations, each seen on a single (ephemeral) port
+    rows = [("2017-07-04 14:01", "192.168.10.50", f"203.0.113.{i}", 50000 + i) for i in range(1, 9)]
+    assert b0_findings(_flows(rows), W0, RULES) == []
+
+
+def test_beaconing_rarity_condition_skips_known_destinations():
+    regular = [(f"2017-07-04 14:0{m}", "192.168.10.15", "205.174.165.73", 8080) for m in range(5) for _ in range(2)]
+    rules = {**RULES, "beaconing": {**RULES["beaconing"], "require_rare_destination": True}}
+    assert b0_findings(_flows(regular), W0, rules, known_dsts={"205.174.165.73"}) == []
+    assert len(b0_findings(_flows(regular), W0, rules, known_dsts={"8.8.8.8"})) == 1
+
+
 def test_beaconing_needs_external_dst_and_regularity():
     regular = [(f"2017-07-04 14:0{m}", "192.168.10.15", "205.174.165.73", 8080) for m in range(5) for _ in range(2)]
     to_internal = [(t, s, "192.168.10.3", p) for t, s, _, p in regular]

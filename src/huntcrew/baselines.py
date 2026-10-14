@@ -20,7 +20,14 @@ def _finding(window: Window, entity: str, rule: str, behaviour: str, evidence: d
                    technique_hints=[TechniqueHint(id=RULE_TO_TECHNIQUE[rule], citation=f"b0-rule:{rule}")])
 
 
-def b0_findings(current: pd.DataFrame, window: Window, rules: dict) -> list[Finding]:
+def known_destinations(baseline_flows: pd.DataFrame) -> set[str]:
+    """External destinations seen in benign baseline traffic (used by the rarity condition)."""
+    d = baseline_flows["dst_ip"].drop_duplicates()
+    return {str(i) for i in d if not is_private(str(i))}
+
+
+def b0_findings(current: pd.DataFrame, window: Window, rules: dict,
+                known_dsts: set[str] | None = None) -> list[Finding]:
     if current.empty:
         return []
     out: list[Finding] = []
@@ -33,13 +40,17 @@ def b0_findings(current: pd.DataFrame, window: Window, rules: dict) -> list[Find
                                 f"{n} flows to port {port}", {"flows": float(n), "dst_port": float(port)}))
 
     ps = rules["port_scan"]
-    ports = current.groupby("src_ip")["dst_port"].nunique()
-    for src, n in ports[ports >= ps["min_distinct_ports"]].items():
+    # distinct ports on ONE destination host; a server replying to many clients is not scanning
+    pair = current.groupby(["src_ip", "dst_ip"])["dst_port"].nunique()
+    for (src, dst), n in pair[pair >= ps["min_distinct_ports"]].items():
         out.append(_finding(window, str(src), "port_scan",
-                            f"{n} distinct destination ports", {"distinct_ports": float(n)}))
+                            f"{n} distinct destination ports on {dst}",
+                            {"distinct_ports": float(n)}))
 
     bc = rules["beaconing"]
     ext = current[~current["dst_ip"].map(is_private)]
+    if bc.get("require_rare_destination") and known_dsts is not None:
+        ext = ext[~ext["dst_ip"].isin(known_dsts)]      # only destinations never seen in normal traffic
     if not ext.empty:
         minute = ext["ts"].dt.floor("min")
         trip = ext.assign(_m=minute).groupby(["src_ip", "dst_ip", "dst_port", "_m"]).size()

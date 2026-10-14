@@ -51,7 +51,7 @@ splits:
 baseline_rules:                # evaluated per replay window
   password_guessing: {min_flows: 50, ports: [21, 22]}
   port_scan: {min_distinct_ports: 100}
-  beaconing: {min_flows: 10, min_active_minutes: 3, max_cv: 0.3}
+  beaconing: {min_flows: 10, min_active_minutes: 3, max_cv: 0.3, require_rare_destination: true}
 
 # Pre-registered bar for "agent detector is usable" (ADR-019). If missed -> B2-hybrid.
 decision_gate:
