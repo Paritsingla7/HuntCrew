@@ -185,7 +185,7 @@ def install(min_interval_s: float = 1.2, tokens_per_minute: int = 16000, max_ret
     import litellm
 
     mw = Middleware(min_interval_s, tokens_per_minute, max_retries, cache_dir)
-    litellm.completion = mw.wrap(litellm.completion, lambda d: litellm.ModelResponse(**d))  
+    litellm.completion = mw.wrap(litellm.completion, lambda d: litellm.ModelResponse(**d))
     _installed = mw
     return mw
 
