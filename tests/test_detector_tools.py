@@ -143,3 +143,13 @@ def test_verdict_parser_returns_only_confirmed_attacks():
     text = '{"verdicts": [{"entity": "A", "attack": true}, {"entity": "B", "attack": false}]}'
     assert [x["entity"] for x in parse_findings_json(text) or []] == ["A"]
     assert parse_findings_json('{"findings": [{"entity": "C"}]}') == [{"entity": "C"}]
+
+
+def test_truncated_answer_still_yields_complete_confirmed_verdicts():
+    from huntcrew.detector import parse_findings_json
+    cut = ('```json\n{"verdicts": [{"entity": "A", "attack": true, "behaviour": "x", "evidence": {"flows": 5}}, '
+           '{"entity": "B", "attack": false, "behaviour": "y", "evidence": {}}, '
+           '{"entity": "C", "attack": true, "behaviour": "text that gets cut off here, never closes')
+    got = parse_findings_json(cut)
+    assert got is not None and [x["entity"] for x in got] == ["A"]
+    assert parse_findings_json("```json\n{\"verdicts\": [") is None

@@ -68,7 +68,8 @@ Final answer must be ONLY this JSON (no prose), one entry per candidate:
 {{"verdicts": [{{"entity": "<source ip>", "attack": true, "behaviour": "<=25 words",
 "evidence": {{"flows": 0}}, "technique_hints": [{{"id": "T0000", "citation": "T0000"}}],
 "confidence": 0.0}}]}}
-For a rejected candidate use "attack": false and a short behaviour note; evidence may be empty.
+Keep it short: at most 4 evidence metrics per candidate. For a rejected candidate use "attack": false,
+a behaviour note of at most 8 words, and "evidence": {{}}.
 """
 
 MAX_CANDIDATES = 8
@@ -97,25 +98,71 @@ class WindowResult:
                 "verdicts_missing": self.verdicts_missing}
 
 
+def _salvage_objects(text: str) -> list[dict]:
+    """Recover complete JSON objects from a truncated answer by balanced-brace scanning (string-aware)."""
+    out: list[dict] = []
+    start = max(text.find('"verdicts"'), text.find('"findings"'))
+    if start < 0:
+        return out
+    k = text.find("[", start)
+    if k < 0:
+        return out
+    depth, in_str, esc, obj_start = 0, False, False, -1
+    for pos in range(k + 1, len(text)):
+        ch = text[pos]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                obj_start = pos
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and obj_start >= 0:
+                try:
+                    obj = json.loads(text[obj_start:pos + 1])
+                    if isinstance(obj, dict):
+                        out.append(obj)
+                except json.JSONDecodeError:
+                    pass
+                obj_start = -1
+            elif depth < 0:
+                break
+    return out
+
+
 def parse_findings_json(text: str) -> list[dict] | None:
-    """Extract the findings list from model output. None means unparseable."""
+    """Extract confirmed findings from model output. None means unparseable (nothing salvageable)."""
     if not text:
         return None
     i, j = text.find("{"), text.rfind("}")
-    if i < 0 or j <= i:
-        return None
-    try:
-        data = json.loads(text[i:j + 1])
-    except json.JSONDecodeError:
-        return None
+    data: Any = None
+    if i >= 0 and j > i:
+        try:
+            data = json.loads(text[i:j + 1])
+        except json.JSONDecodeError:
+            data = None
+    if data is None:                                   # truncated or malformed: keep complete objects
+        items = _salvage_objects(text)
+        if not items:
+            return None
+        return [x for x in items if x.get("attack") is True or ("verdicts" not in text and "entity" in x)]
     if not isinstance(data, dict):
         return None
     if isinstance(data.get("verdicts"), list):
         return [x for x in data["verdicts"] if isinstance(x, dict) and x.get("attack") is True]
-    items = data.get("findings")
-    if not isinstance(items, list):
+    legacy = data.get("findings")
+    if not isinstance(legacy, list):
         return None
-    return [x for x in items if isinstance(x, dict)]
+    return [x for x in legacy if isinstance(x, dict)]
 
 
 def build_tools(ctx: DetectorContext) -> list[Any]:
