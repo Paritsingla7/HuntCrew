@@ -1,5 +1,7 @@
 # HuntCrew
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Paritsingla7/HuntCrew/blob/main/notebooks/huntcrew_colab.ipynb)
+
 **Agent-led threat detection and response on real network traffic, graded by code against labels the
 system never sees.**
 
@@ -54,7 +56,10 @@ action inside policy (1.00). **Technique naming is weak (1 of 9 attack-linked in
 beaconing is mostly missed. Full tables, protocol and limitations: `docs/05-evaluation.md`.
 
 ## Status
-All phases built and evaluated; Colab run and write-up in progress. See `docs/PROGRESS.md` and `docs/ISSUES.md`.
+All phases built, evaluated and verified on Colab. See `docs/PROGRESS.md` and `docs/ISSUES.md`.
+
+**Colab:** open the badge above, run all cells (the first pass installs packages and restarts the session; run
+all again), and add a Colab Secret named `MISTRAL_API_KEY` with notebook access enabled.
 
 ## Quick start
 ```bash
@@ -74,6 +79,7 @@ The LLM stage needs `MISTRAL_API_KEY` in the environment (a local `.env` is git-
 | `docs/03-architecture.md` | design, principles, components, evaluation |
 | `docs/04-implementation-plan.md` | phases, risks, evaluation design |
 | `docs/05-evaluation.md` | results, protocol, limitations |
+| `docs/06-viva-notes.md` | short Q&A for explaining the project |
 | `docs/data-provenance.md` | where data came from, checks, quirks |
 | `docs/label-mapping.md` | label → ATT&CK mapping and grading rules |
 | `docs/DECISIONS.md` | architecture decision records |

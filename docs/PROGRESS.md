@@ -10,6 +10,14 @@ Newest entry on top.
 - Tests: 34 passing (first run downloads the embedding model, ~1 min).
 - Next: P4 detector agent (needs the provider API key and limits).
 
+## 2026-10-15 (morning) — P7 Colab run verified
+- Notebook is generated from the package (`notebooks/build_notebook.py`) and opened from GitHub in Colab.
+- Fixed on the way: import path, Colab-friendly requirements, install-and-restart cell, loop-safe crew
+  execution, idempotent clone, API-key preflight (I-018, I-019).
+- Fresh-runtime run succeeded: detection on real traffic (attacker `172.16.0.1` flagged), assessment
+  `T1021.004` + `T1110`, simulated rate limit, incident report, results table.
+- Added `docs/06-viva-notes.md` and the Colab badge in the README.
+
 ## 2026-10-15 (morning) — P6 evaluation complete
 - Dev: B0 recall 0.93 / precision 0.27; agent-led 0.64 / 0.09 (gate missed, ADR-027); hybrid 0.93 / 0.42.
 - Test slices run once on the frozen commit `19b8682`. Pooled: B0 R 0.29 / P 0.27 / 76 FP; hybrid R 0.29 /
@@ -71,5 +79,5 @@ Newest entry on top.
 | P4 Detector agent | ✅ done (gate: hybrid) |
 | P5 Downstream crew + response | ✅ done |
 | P6 Evaluation | ✅ done |
-| P7 Colab | ⬜ |
+| P7 Colab | ✅ done |
 | P8 Polish | ⬜ |
