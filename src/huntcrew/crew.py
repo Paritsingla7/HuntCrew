@@ -42,6 +42,27 @@ def incident_brief(inc: Incident) -> str:
     return "\n".join(lines)
 
 
+def incident_profile(flows: Any, inc: Incident) -> str:
+    """Neutral aggregate facts for an incident, computed by code from the flows the incident spans.
+
+    No labels, no verdicts: just the quantities an analyst would read to tell different behaviours apart.
+    """
+    cur = flows[(flows["ts"] >= inc.start) & (flows["ts"] < inc.end) & (flows["src_ip"] == inc.entity)]
+    n = len(cur)
+    if n == 0:
+        return "no flows"
+    minutes = max(1.0, (inc.end - inc.start).total_seconds() / 60.0)
+    unanswered = float((cur["bwd_pkts"] == 0).mean())
+    ports = cur["dst_port"].value_counts()
+    top = ", ".join(f"{int(p)}:{c / n:.0%}" for p, c in ports.head(3).items())
+    return (f"Aggregate facts for {inc.entity} over the incident: flows={n}, flows_per_minute={n / minutes:.1f}, "
+            f"distinct_dst_ips={cur['dst_ip'].nunique()}, distinct_dst_ports={cur['dst_port'].nunique()}, "
+            f"top_dst_ports(share)={top}, unanswered_flow_share={unanswered:.2f} (flows with no backward packets), "
+            f"mean_fwd_packets_per_flow={cur['fwd_pkts'].mean():.1f}, mean_bwd_packets_per_flow={cur['bwd_pkts'].mean():.1f}, "
+            f"mean_fwd_bytes_per_flow={cur['fwd_bytes'].mean():.0f}, mean_bwd_bytes_per_flow={cur['bwd_bytes'].mean():.0f}, "
+            f"mean_flow_duration_ms={cur['duration_us'].mean() / 1000:.1f}")
+
+
 # --- guardrails -------------------------------------------------------------------------------
 def guard_assessment(draft: dict, incident_id: str, kb_ids: set[str], retrieved: set[str]) -> ThreatAssessment:
     techs: list[TechniqueAssessment] = []
@@ -103,10 +124,16 @@ def guard_plan(draft: dict, incident_id: str, assessment: ThreatAssessment, kb: 
 INTEL_PROMPT = """Identify which MITRE ATT&CK technique(s) this incident corresponds to.
 
 {brief}
+{profile}
 
-Steps: describe the behaviour in plain words, call search_attack_kb (try more than one phrasing if the
-first results do not fit), then choose the best-matching technique ID(s). Prefer the most specific
-sub-technique only if the evidence supports it; otherwise use the parent technique. At most 2 techniques.
+Steps:
+1. Read the aggregate facts: are flows answered or unanswered, how large is each flow, how concentrated is
+   the traffic on one port or destination, how regular is it, how many destinations or ports are touched.
+2. Form at least THREE competing hypotheses that span different ATT&CK tactics (for example access or
+   credential-related, discovery, command and control, exfiltration, impact). Call search_attack_kb once
+   per hypothesis with a plain description of what the facts would look like under it.
+3. Compare each hypothesis with the facts and choose the best-matching technique ID(s). Prefer the most
+   specific sub-technique only if the evidence supports it; otherwise use the parent technique. At most 2.
 Only cite IDs returned by search_attack_kb.
 
 Answer with ONLY this JSON:
@@ -172,23 +199,23 @@ class DownstreamCrew:
 
         return search_attack_kb_tool
 
-    def assess(self, inc: Incident) -> tuple[ThreatAssessment, str]:
+    def assess(self, inc: Incident, profile: str = "") -> tuple[ThreatAssessment, str]:
         start = len(self.kb.trace)
         raw = _run(self.llm, "Threat intelligence analyst",
                    "Map the incident to the correct MITRE ATT&CK technique using retrieved evidence.",
                    "Knows ATT&CK well and never cites an ID without retrieving it.",
-                   [self._search_tool()], INTEL_PROMPT.format(brief=incident_brief(inc)))
+                   [self._search_tool()], INTEL_PROMPT.format(brief=incident_brief(inc), profile=profile))
         retrieved = {i for t in self.kb.trace[start:] for i in t["ids"]}
         draft = extract_json(raw) or {}
         return guard_assessment(draft, inc.id, self.kb_ids, retrieved), raw
 
-    def plan(self, inc: Incident, assessment: ThreatAssessment) -> tuple[PlanGuard, str]:
+    def plan(self, inc: Incident, assessment: ThreatAssessment, profile: str = "") -> tuple[PlanGuard, str]:
         mits: dict[str, str] = {}
         for t in assessment.techniques:
             for m in self.kb.mitigations_for(t.id):
                 mits[m.id] = m.name
         prompt = STRATEGY_PROMPT.format(
-            brief=incident_brief(inc),
+            brief=incident_brief(inc) + ("\n" + profile if profile else ""),
             techniques=", ".join(f"{t.id}" for t in assessment.techniques) or "none identified",
             catalog="; ".join(f"{k}: {v['risk']}" for k, v in self.policy.catalog.items()),
             mitigations="; ".join(f"{k}: {v}" for k, v in mits.items()) or "none available",

@@ -44,3 +44,22 @@ def test_plan_guard_filters_actions_and_grounds_mitigations():
 def test_extract_json_handles_fences_and_prose():
     assert extract_json('Here:\n```json\n{"a": 1}\n```') == {"a": 1}
     assert extract_json("nothing here") is None
+
+
+def test_incident_profile_reports_neutral_aggregates_only():
+    from datetime import datetime
+
+    import pandas as pd
+
+    from huntcrew.crew import incident_profile
+    from huntcrew.schema import Incident
+
+    ts = pd.to_datetime(["2017-07-04 09:15", "2017-07-04 09:16", "2017-07-04 09:17", "2017-07-04 09:18"])
+    flows = pd.DataFrame({"ts": ts, "src_ip": ["A", "A", "A", "B"], "dst_ip": ["X"] * 4, "dst_port": [21, 21, 80, 21],
+                          "fwd_pkts": [3, 3, 1, 9], "bwd_pkts": [2, 0, 0, 9], "fwd_bytes": [60, 60, 40, 9],
+                          "bwd_bytes": [90, 0, 0, 9], "duration_us": [1000, 2000, 3000, 4000]})
+    inc = Incident(id="I", entity="A", start=datetime(2017, 7, 4, 9, 15), end=datetime(2017, 7, 4, 9, 20), findings=[])
+    text = incident_profile(flows, inc)
+    assert "flows=3" in text and "unanswered_flow_share=0.67" in text and "top_dst_ports(share)=21:67%" in text
+    assert "attack" not in text.lower() and "malicious" not in text.lower()
+    assert incident_profile(flows, Incident(id="J", entity="Z", start=inc.start, end=inc.end, findings=[])) == "no flows"
