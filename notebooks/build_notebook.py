@@ -33,7 +33,16 @@ Requires a Colab Secret named `MISTRAL_API_KEY` with notebook access enabled.
     code(f"""
 !git clone -q {REPO} 2>/dev/null || (cd HuntCrew && git pull -q)
 %cd HuntCrew
-!pip install -q -r requirements-colab.txt
+"""),
+    code("""
+# Install once. Colab must restart its Python process after packages such as Pillow change, so on the
+# first run this cell installs and then restarts the session; just run "Run all" again afterwards.
+import importlib.util, os, signal, subprocess, sys
+if importlib.util.find_spec("crewai") is None:
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", "requirements-colab.txt"], check=True)
+    print("Packages installed. Restarting the session now - run all cells again.")
+    os.kill(os.getpid(), signal.SIGKILL)
+print("dependencies ready")
 """),
     code("""
 # Fetch the two external datasets (about 425 MB) with checksums; they are never stored in the repository.
