@@ -28,6 +28,7 @@ from .llm import Middleware  # noqa: E402
 from .profile import BaselineProfile  # noqa: E402
 from .replay import Replay, Window  # noqa: E402
 from .schema import Finding, Incident  # noqa: E402
+from .syncutil import run_blocking  # noqa: E402
 
 SCREEN_TEMPLATE = """You are screening network sources seen in ONE {minutes}-minute window ({label}).
 {peers}
@@ -200,7 +201,7 @@ def _run_agent(llm: Any, tools: list[Any], prompt: str, max_iter: int) -> str:
     )
     task = Task(description=prompt, expected_output="Only the JSON object described in the task.", agent=agent)
     crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=False)
-    out = crew.kickoff()
+    out = run_blocking(crew.kickoff)
     return str(getattr(out, "raw", out))
 
 

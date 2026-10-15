@@ -18,6 +18,7 @@ os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 from .attack_kb import AttackKB  # noqa: E402
 from .response import Policy  # noqa: E402
 from .schema import Incident, ProposedAction, ResponsePlan, TechniqueAssessment, ThreatAssessment  # noqa: E402
+from .syncutil import run_blocking  # noqa: E402
 
 SEVERITIES = {"low", "medium", "high", "critical"}
 
@@ -212,7 +213,8 @@ def _run(llm: Any, role: str, goal: str, backstory: str, tools: list[Any], promp
     agent = Agent(role=role, goal=goal, backstory=backstory, tools=tools, llm=llm, max_iter=max_iter,
                   allow_delegation=False, verbose=False)
     task = Task(description=prompt, expected_output="Exactly the format requested.", agent=agent)
-    out = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=False).kickoff()
+    crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=False)
+    out = run_blocking(crew.kickoff)
     return str(getattr(out, "raw", out))
 
 
