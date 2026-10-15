@@ -71,5 +71,14 @@ def test_candidates_rank_by_best_score_and_keep_agent_choice_first():
     kb = SimpleNamespace(trace=[{"ids": ["A", "B"], "scores": [0.3, 0.6]}, {"ids": ["B", "C"], "scores": [0.5, 0.7]}],
                          chunks={})
     c = DownstreamCrew(kb, Policy({}, set()), llm=None)
-    assert c._candidates(0, ["A"], k=3) == ["A", "C", "B"]
-    assert c._candidates(1, [], k=5) == ["C", "B"]
+    # per-query leaders first (A,B from query 1; B,C from query 2), then agent picks, then the rest by score
+    assert c._candidates(0, ["A"], k=3, per_query=1) == ["A", "B", "C"]
+    assert c._candidates(1, [], k=5, per_query=2) == ["B", "C"]
+
+
+def test_extract_list_accepts_wrapped_and_bare_arrays():
+    from huntcrew.crew import extract_list
+
+    assert extract_list('{"scores": [{"id": "A", "score": 7}]}', "scores") == [{"id": "A", "score": 7}]
+    assert extract_list('```json\n[{"id": "A", "score": 7}, {"id": "B", "score": 2}]\n```', "scores")[1]["id"] == "B"
+    assert extract_list("no json", "scores") is None

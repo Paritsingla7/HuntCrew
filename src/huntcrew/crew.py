@@ -33,6 +33,21 @@ def extract_json(text: str) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+def extract_list(text: str, key: str) -> list | None:
+    """List under `key` in a JSON object, or a bare JSON array (models often drop the wrapper)."""
+    obj = extract_json(text)
+    if obj is not None and isinstance(obj.get(key), list):
+        return obj[key]
+    i, j = text.find("["), text.rfind("]")
+    if i >= 0 and j > i:
+        try:
+            data = json.loads(text[i:j + 1])
+        except json.JSONDecodeError:
+            return None
+        return data if isinstance(data, list) else None
+    return None
+
+
 def incident_brief(inc: Incident) -> str:
     lines = [f"Incident {inc.id}: source {inc.entity}, {inc.start:%Y-%m-%d %H:%M} to {inc.end:%H:%M}, "
              f"{len(inc.findings)} window(s) flagged."]
@@ -168,9 +183,12 @@ CANDIDATE TECHNIQUES (from retrieval)
 {candidates}
 
 For each candidate, state which facts it explains and which facts it conflicts with, then score 0-10 for how
-well its description explains ALL the facts together. Penalise a candidate whose description depends on
-something the facts contradict (for example a technique about moving large volumes of data when each flow
-carries only a few bytes, or one that requires unanswered traffic when most flows were answered).
+well its description explains ALL the facts together.
+- Network flows never show payloads, credentials or login results. The absence of such direct evidence is
+  NOT a contradiction; judge a technique by whether its typical network footprint (volume, concentration,
+  regularity, answered or unanswered traffic, size per flow) matches the facts.
+- Penalise only real conflicts: a technique about moving large volumes of data when each flow carries only
+  a few bytes, or one that requires unanswered traffic when most flows were answered.
 
 Answer with ONLY this JSON, one entry per candidate:
 {{"scores": [{{"id": "T0000", "supports": "<=15 words", "contradicts": "<=15 words", "score": 0}}]}}
@@ -217,15 +235,20 @@ class DownstreamCrew:
 
         return search_attack_kb_tool
 
-    def _candidates(self, start: int, agent_choice: list[str], k: int = 6) -> list[str]:
-        """Retrieved techniques for this incident, best score first; the agent's own picks always included."""
+    def _candidates(self, start: int, agent_choice: list[str], k: int = 8, per_query: int = 2) -> list[str]:
+        """Candidates for the judge: the best `per_query` results of EVERY hypothesis search (so one
+        hypothesis cannot crowd out the others), then the agent's own picks, then the rest by score."""
         best: dict[str, float] = {}
+        out: list[str] = []
         for t in self.kb.trace[start:]:
-            for tid, sc in zip(t["ids"], t.get("scores", [0.0] * len(t["ids"])), strict=False):
+            scores = t.get("scores", [0.0] * len(t["ids"]))
+            for tid, sc in zip(t["ids"], scores, strict=False):
                 best[tid] = max(best.get(tid, 0.0), sc)
-        ranked = sorted(best, key=lambda x: best[x], reverse=True)
-        out = [t for t in agent_choice if t in best]
-        out += [t for t in ranked if t not in out]
+            for tid in t["ids"][:per_query]:
+                if tid not in out:
+                    out.append(tid)
+        out += [t for t in agent_choice if t in best and t not in out]
+        out += [t for t in sorted(best, key=lambda x: best[x], reverse=True) if t not in out]
         return out[:k]
 
     def assess(self, inc: Incident, profile: str = "") -> tuple[ThreatAssessment, str]:
@@ -247,9 +270,9 @@ class DownstreamCrew:
                       "Score candidate techniques against the incident facts, using only the descriptions given.",
                       "Methodical; checks each fact against each description before scoring.", [],
                       JUDGE_PROMPT.format(brief=incident_brief(inc), profile=profile, candidates=desc), max_iter=2)
-        scored = (extract_json(judged) or {}).get("scores")
+        scored = extract_list(judged, "scores")
         if not isinstance(scored, list):
-            return first, raw + "\n[judge unparseable; used agent choice]"
+            return first, raw + "\n[judge unparseable; used agent choice]\n" + judged[:1500]
         rows = []
         for s in scored:
             try:
