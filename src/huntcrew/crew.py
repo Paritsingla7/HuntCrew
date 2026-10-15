@@ -158,6 +158,24 @@ Answer with ONLY this JSON:
 "actions": [{{"type": "block_ip", "target": "<ip>", "justification": "<=20 words", "mitigation_id": null}}]}}
 """
 
+JUDGE_PROMPT = """You are deciding which MITRE ATT&CK technique best explains an incident. Judge ONLY from the
+facts below and the technique descriptions given; do not rely on memory.
+
+{brief}
+{profile}
+
+CANDIDATE TECHNIQUES (from retrieval)
+{candidates}
+
+For each candidate, state which facts it explains and which facts it conflicts with, then score 0-10 for how
+well its description explains ALL the facts together. Penalise a candidate whose description depends on
+something the facts contradict (for example a technique about moving large volumes of data when each flow
+carries only a few bytes, or one that requires unanswered traffic when most flows were answered).
+
+Answer with ONLY this JSON, one entry per candidate:
+{{"scores": [{{"id": "T0000", "supports": "<=15 words", "contradicts": "<=15 words", "score": 0}}]}}
+"""
+
 REPORT_PROMPT = """Write a concise incident report in Markdown for a security manager.
 
 {brief}
@@ -199,6 +217,17 @@ class DownstreamCrew:
 
         return search_attack_kb_tool
 
+    def _candidates(self, start: int, agent_choice: list[str], k: int = 6) -> list[str]:
+        """Retrieved techniques for this incident, best score first; the agent's own picks always included."""
+        best: dict[str, float] = {}
+        for t in self.kb.trace[start:]:
+            for tid, sc in zip(t["ids"], t.get("scores", [0.0] * len(t["ids"])), strict=False):
+                best[tid] = max(best.get(tid, 0.0), sc)
+        ranked = sorted(best, key=lambda x: best[x], reverse=True)
+        out = [t for t in agent_choice if t in best]
+        out += [t for t in ranked if t not in out]
+        return out[:k]
+
     def assess(self, inc: Incident, profile: str = "") -> tuple[ThreatAssessment, str]:
         start = len(self.kb.trace)
         raw = _run(self.llm, "Threat intelligence analyst",
@@ -207,7 +236,37 @@ class DownstreamCrew:
                    [self._search_tool()], INTEL_PROMPT.format(brief=incident_brief(inc), profile=profile))
         retrieved = {i for t in self.kb.trace[start:] for i in t["ids"]}
         draft = extract_json(raw) or {}
-        return guard_assessment(draft, inc.id, self.kb_ids, retrieved), raw
+        first = guard_assessment(draft, inc.id, self.kb_ids, retrieved)
+        cands = self._candidates(start, [t.id for t in first.techniques])
+        if len(cands) < 2:
+            return first, raw
+        # judge step: score every retrieved candidate against the facts using the real ATT&CK descriptions
+        desc = "\n".join(f"- {c}: {self.kb.chunks[c].name} [{', '.join(self.kb.chunks[c].tactics)}]: "
+                         f"{self.kb.chunks[c].description[:380]}" for c in cands)
+        judged = _run(self.llm, "ATT&CK technique judge",
+                      "Score candidate techniques against the incident facts, using only the descriptions given.",
+                      "Methodical; checks each fact against each description before scoring.", [],
+                      JUDGE_PROMPT.format(brief=incident_brief(inc), profile=profile, candidates=desc), max_iter=2)
+        scored = (extract_json(judged) or {}).get("scores")
+        if not isinstance(scored, list):
+            return first, raw + "\n[judge unparseable; used agent choice]"
+        rows = []
+        for s in scored:
+            try:
+                tid, sc = str(s.get("id", "")).strip(), float(s.get("score", 0))
+            except (TypeError, ValueError, AttributeError):
+                continue
+            if tid in cands:
+                rows.append((sc, tid))
+        rows.sort(key=lambda r: (-r[0], cands.index(r[1])))
+        top = [(sc, tid) for sc, tid in rows if sc >= 5][:2]
+        if not top:
+            return first, raw + "\n[judge found no candidate >= 5; used agent choice]"
+        techs = [{"id": tid, "confidence": round(sc / 10, 2), "citation": self.kb.chunks[tid].name}
+                 for sc, tid in top]
+        final = guard_assessment({"techniques": techs, "rationale": first.rationale}, inc.id, self.kb_ids,
+                                 set(cands) | retrieved)
+        return final, raw + "\n[judge] " + judged
 
     def plan(self, inc: Incident, assessment: ThreatAssessment, profile: str = "") -> tuple[PlanGuard, str]:
         mits: dict[str, str] = {}

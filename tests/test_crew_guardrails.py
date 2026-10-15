@@ -63,3 +63,13 @@ def test_incident_profile_reports_neutral_aggregates_only():
     assert "flows=3" in text and "unanswered_flow_share=0.67" in text and "top_dst_ports(share)=21:67%" in text
     assert "attack" not in text.lower() and "malicious" not in text.lower()
     assert incident_profile(flows, Incident(id="J", entity="Z", start=inc.start, end=inc.end, findings=[])) == "no flows"
+
+
+def test_candidates_rank_by_best_score_and_keep_agent_choice_first():
+    from huntcrew.crew import DownstreamCrew
+
+    kb = SimpleNamespace(trace=[{"ids": ["A", "B"], "scores": [0.3, 0.6]}, {"ids": ["B", "C"], "scores": [0.5, 0.7]}],
+                         chunks={})
+    c = DownstreamCrew(kb, Policy({}, set()), llm=None)
+    assert c._candidates(0, ["A"], k=3) == ["A", "C", "B"]
+    assert c._candidates(1, [], k=5) == ["C", "B"]
