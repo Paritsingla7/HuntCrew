@@ -33,14 +33,15 @@ Requires a Colab Secret named `MISTRAL_API_KEY` with notebook access enabled.
     code(f"""
 !git clone -q {REPO} 2>/dev/null || (cd HuntCrew && git pull -q)
 %cd HuntCrew
-!pip install -q -r requirements.txt
+!pip install -q -r requirements-colab.txt
 """),
     code("""
 # Fetch the two external datasets (about 425 MB) with checksums; they are never stored in the repository.
 !python -I scripts/fetch_data.py
 """),
     code("""
-import warnings; warnings.filterwarnings("ignore")
+import sys, warnings; warnings.filterwarnings("ignore")
+sys.path.insert(0, "src")          # use the cloned package directly
 from huntcrew import demo
 d = demo.setup()          # loads data, builds the ATT&CK knowledge base, wires agents (key from Colab Secrets)
 print("model:", d.cfg["llm"]["model"], "| ATT&CK chunks:", len(d.kb.chunks))

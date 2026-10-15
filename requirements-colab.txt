@@ -1,0 +1,6 @@
+# Colab ships its own numpy/pandas/pyarrow/pydantic/torch; only the packages it lacks are pinned here.
+crewai==1.15.28
+chromadb==1.5.9
+litellm==1.103.1
+sentence-transformers
+PyYAML
