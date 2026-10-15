@@ -162,7 +162,7 @@ class AttackKB:
             c = self.chunks[cid]
             hits.append(Hit(id=c.id, name=c.name, score=round(1.0 - float(dist), 4), tactics=c.tactics,
                             snippet=c.description[:400], mitigations=c.mitigations))
-        self.trace.append({"query": query, "ids": [h.id for h in hits]})
+        self.trace.append({"query": query, "ids": [h.id for h in hits], "scores": [h.score for h in hits]})
         return hits
 
     def retrieved_ids(self) -> set[str]:
