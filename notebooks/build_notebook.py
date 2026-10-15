@@ -31,8 +31,9 @@ Architecture and decisions: see `docs/` in the repository. Run all cells top to 
 Requires a Colab Secret named `MISTRAL_API_KEY` with notebook access enabled.
 """),
     code(f"""
+%cd /content
 !git clone -q {REPO} 2>/dev/null || (cd HuntCrew && git pull -q)
-%cd HuntCrew
+%cd /content/HuntCrew
 """),
     code("""
 # Install once. Colab must restart its Python process after packages such as Pillow change, so on the
