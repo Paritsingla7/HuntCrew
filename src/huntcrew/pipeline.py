@@ -27,9 +27,10 @@ def log_summary(log: ActionLog) -> str:
 
 
 def process_incident(inc: Incident, crew: DownstreamCrew, policy: Policy, env: SimulatedEnvironment,
-                     approver: Approver = auto_deny, write_report: bool = True) -> IncidentOutcome:
-    assessment, raw_a = crew.assess(inc)
-    guard, raw_p = crew.plan(inc, assessment)
+                     approver: Approver = auto_deny, write_report: bool = True,
+                     profile: str = "") -> IncidentOutcome:
+    assessment, raw_a = crew.assess(inc, profile)
+    guard, raw_p = crew.plan(inc, assessment, profile)
     log = execute_plan(guard.plan, policy, env, approver)
     report = crew.report(inc, assessment, guard.plan, log_summary(log)) if write_report else ""
     return IncidentOutcome(inc, assessment, guard.plan, guard, log, report, {"assess": raw_a, "plan": raw_p})

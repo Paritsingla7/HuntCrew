@@ -11,7 +11,7 @@ from . import llm as llmmod
 from .attack_kb import AttackKB, load_chunks
 from .baselines import known_destinations
 from .config import load_config
-from .crew import DownstreamCrew
+from .crew import DownstreamCrew, incident_profile
 from .data_cic import CicData, load_cic
 from .detector import WindowResult, merge_into_incidents, run_detector
 from .pipeline import IncidentOutcome, process_incident
@@ -70,10 +70,11 @@ def detect(d: Demo, split: str, name: str, windows: list[int], mode: str = "rule
     return res, merge_into_incidents(findings, d.cfg["replay"]["window_minutes"])
 
 
-def respond(d: Demo, incidents: list[Incident], approver: Approver = auto_deny
+def respond(d: Demo, incidents: list[Incident], approver: Approver = auto_deny, flows: Any = None
             ) -> tuple[list[IncidentOutcome], SimulatedEnvironment]:
     env = SimulatedEnvironment()
-    return [process_incident(i, d.crew, d.policy, env, approver) for i in incidents], env
+    prof = (lambda i: incident_profile(flows, i)) if flows is not None else (lambda i: "")
+    return [process_incident(i, d.crew, d.policy, env, approver, profile=prof(i)) for i in incidents], env
 
 
 def windows_labelled(d: Demo, split: str, name: str) -> pd.DataFrame:

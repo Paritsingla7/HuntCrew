@@ -21,7 +21,7 @@ from huntcrew import llm as llmmod  # noqa: E402
 from huntcrew.attack_kb import AttackKB, load_chunks  # noqa: E402
 from huntcrew.baselines import b0_findings, b1_window, known_destinations  # noqa: E402
 from huntcrew.config import load_config  # noqa: E402
-from huntcrew.crew import DownstreamCrew  # noqa: E402
+from huntcrew.crew import DownstreamCrew, incident_profile  # noqa: E402
 from huntcrew.data_cic import load_cic  # noqa: E402
 from huntcrew.detector import merge_into_incidents, run_detector  # noqa: E402
 from huntcrew.digest import build_digest  # noqa: E402
@@ -97,7 +97,8 @@ def main() -> None:
             entry["incidents"] = len(incidents)
             if system in {"agent", "hybrid"} and not a.no_downstream:
                 env = SimulatedEnvironment()
-                outcomes = [process_incident(i, crew, policy, env, auto_deny, write_report=True) for i in incidents]
+                outcomes = [process_incident(i, crew, policy, env, auto_deny, write_report=True,
+                                             profile=incident_profile(sl.flows, i)) for i in incidents]
                 entry["response"] = grade_outcomes(outcomes, truth, windows, kb_ids)
                 entry["environment"] = {k: len(v) for k, v in env.snapshot().items()}
             entry["llm"] = mw.stats.delta(before)
