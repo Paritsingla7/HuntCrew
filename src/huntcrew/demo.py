@@ -42,6 +42,10 @@ def setup(config_path: str | None = None, model: str | None = None, use_colab_se
             os.environ["MISTRAL_API_KEY"] = userdata.get("MISTRAL_API_KEY")
         except Exception:                               # noqa: BLE001 - not on Colab / secret missing
             llmmod.load_dotenv()
+    ok, msg = llmmod.check_api_key()
+    print("API key check:", msg)
+    if not ok:
+        raise RuntimeError(f"Cannot continue: {msg}")
     cfg = load_config(config_path)
     c = cfg["llm"]
     mw = llmmod.install(c["min_interval_s"], c["tokens_per_minute"], c["max_retries"], c["cache_dir"])

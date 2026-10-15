@@ -135,3 +135,30 @@ def test_unsupported_caching_hints_are_stripped_before_the_provider(tmp_path):
     sent = seen[0]["messages"]
     assert "cache_breakpoint" not in sent[0]
     assert sent[1]["content"][0] == {"type": "text", "text": "t"}
+
+
+def test_check_api_key_reports_missing_without_network(monkeypatch):
+    from huntcrew.llm import check_api_key
+
+    monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
+    ok, msg = check_api_key()
+    assert ok is False and "not set" in msg
+
+
+def test_check_api_key_strips_quotes_and_whitespace(monkeypatch):
+    import urllib.error
+    import urllib.request
+
+    from huntcrew import llm as m
+
+    monkeypatch.setenv("MISTRAL_API_KEY", ' "abc123"\n')
+    seen = {}
+
+    def fake_urlopen(req, timeout=0):
+        seen["auth"] = req.headers.get("Authorization")
+        raise urllib.error.HTTPError(req.full_url, 401, "no", {}, None)   # type: ignore[arg-type]
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    ok, msg = m.check_api_key()
+    assert seen["auth"] == "Bearer abc123" and ok is False and "length 6" in msg and "HTTP 401" in msg
+    assert "abc123" not in msg

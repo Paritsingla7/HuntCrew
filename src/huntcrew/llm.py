@@ -204,6 +204,28 @@ def install(min_interval_s: float = 1.2, tokens_per_minute: int = 16000, max_ret
     return mw
 
 
+def check_api_key(timeout: float = 20.0) -> tuple[bool, str]:
+    """Preflight: does the configured key authenticate? Never prints or returns the key itself."""
+    import urllib.error
+    import urllib.request
+
+    key = os.environ.get("MISTRAL_API_KEY", "")
+    clean = key.strip().strip('"').strip("'")
+    if clean != key:
+        os.environ["MISTRAL_API_KEY"] = clean
+    if not clean:
+        return False, "MISTRAL_API_KEY is not set"
+    req = urllib.request.Request("https://api.mistral.ai/v1/models", headers={"Authorization": f"Bearer {clean}"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return True, f"key accepted (length {len(clean)}, HTTP {r.status})"
+    except urllib.error.HTTPError as e:
+        hint = " - re-copy the key into the Colab secret / .env without spaces" if e.code == 401 else ""
+        return False, f"provider rejected the key (length {len(clean)}, HTTP {e.code}){hint}"
+    except OSError as e:
+        return False, f"could not reach the provider: {e}"
+
+
 def make_llm(cfg: dict, model: str | None = None):
     """CrewAI LLM for the configured model. Call `install()` first so the middleware is in place."""
     from crewai import LLM
