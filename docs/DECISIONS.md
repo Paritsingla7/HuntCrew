@@ -181,3 +181,11 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 - **Honest reading:** with a 14B-class model the agent over-flags busy-but-ordinary hosts; verification
   against baselines and retrieval is where it earns its place, not first-pass detection.
 - **Not done:** no further prompt tuning to "pass" the gate. The test slices have not been used.
+
+## ADR-028 — Test-slice protocol and reporting
+- **Status:** accepted
+- **Decision:** the code was frozen at commit `19b8682`; the three test slices were run once with all four
+  systems; results were reported as measured (`docs/05-evaluation.md`, `results/final.json`). No tuning followed.
+- **Consequences:** the weak technique-naming result and the missed low-and-slow beaconing are reported as
+  limitations. Any further improvement (for example a union of rule and screening candidates) must be evaluated
+  on fresh data or declared as post-hoc.

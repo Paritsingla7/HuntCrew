@@ -10,6 +10,14 @@ Newest entry on top.
 - Tests: 34 passing (first run downloads the embedding model, ~1 min).
 - Next: P4 detector agent (needs the provider API key and limits).
 
+## 2026-10-15 (morning) — P6 evaluation complete
+- Dev: B0 recall 0.93 / precision 0.27; agent-led 0.64 / 0.09 (gate missed, ADR-027); hybrid 0.93 / 0.42.
+- Test slices run once on the frozen commit `19b8682`. Pooled: B0 R 0.29 / P 0.27 / 76 FP; hybrid R 0.29 /
+  P 0.41 / 40 FP; agent-led R 0.36 / P 0.11 / 273 FP; B1 R 0.03 / 401 FP.
+- Hybrid pipeline: grounding 1.00, policy pass 1.00, incident-level technique accuracy 1/9.
+- Wrote `docs/05-evaluation.md` with limitations stated plainly; assembled `results/final.json`.
+- Next: Colab run through Chrome, README results and viva notes.
+
 ## 2026-10-15 (late night) — P4/P5 build-out, gate pending
 - LLM middleware: throttle, token budget, completion-level response cache, retries; strips prompt-caching
   hints that the provider rejects (I-010).
@@ -60,8 +68,8 @@ Newest entry on top.
 | P1 Foundation | ✅ done |
 | P2 Replay + digest + B0 | ✅ done |
 | P3 Knowledge base | ✅ done |
-| P4 Detector agent | 🔄 built, gate pending |
-| P5 Downstream crew + response | ✅ built (live run pending) |
-| P6 Evaluation | ⬜ |
+| P4 Detector agent | ✅ done (gate: hybrid) |
+| P5 Downstream crew + response | ✅ done |
+| P6 Evaluation | ✅ done |
 | P7 Colab | ⬜ |
 | P8 Polish | ⬜ |

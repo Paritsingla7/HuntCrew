@@ -38,10 +38,23 @@ Why it is built this way:
 7. **Pre-registered gate.** The bar for "agent detection is usable" was fixed before any result.
 8. **Simulation only, human gate** for risky actions.
 
+## Results (test slices, one frozen run, `ministral-14b-latest`)
+Pooled over SSH-Patator, Bot and PortScan (95 attack-positive (window, entity) pairs):
+
+| System | Recall | Precision | F1 | False positives |
+|---|---|---|---|---|
+| B0 rules | 0.29 | 0.27 | 0.28 | 76 |
+| B1 single prompt | 0.03 | 0.01 | 0.01 | 401 |
+| Agent-led | 0.36 | 0.11 | 0.17 | 273 |
+| **Hybrid (rules + agent)** | 0.29 | **0.41** | **0.34** | **40** |
+
+The agent-led detector missed the pre-registered bar on dev, so the hybrid is the primary system. It halves
+the rules' false positives without losing a detection, keeps every cited technique grounded (1.00) and every
+action inside policy (1.00). **Technique naming is weak (1 of 9 attack-linked incidents)** and low-and-slow
+beaconing is mostly missed. Full tables, protocol and limitations: `docs/05-evaluation.md`.
+
 ## Status
-Data loader, replay simulator, digest, rules baseline, ATT&CK knowledge base, two-stage detector, response
-layer, downstream agents and graders are built and tested; evaluation runs are in progress.
-See `docs/PROGRESS.md` and `docs/ISSUES.md`.
+All phases built and evaluated; Colab run and write-up in progress. See `docs/PROGRESS.md` and `docs/ISSUES.md`.
 
 ## Quick start
 ```bash
@@ -60,6 +73,7 @@ The LLM stage needs `MISTRAL_API_KEY` in the environment (a local `.env` is git-
 | `docs/02-requirements.md` | problem statement, objectives, requirements |
 | `docs/03-architecture.md` | design, principles, components, evaluation |
 | `docs/04-implementation-plan.md` | phases, risks, evaluation design |
+| `docs/05-evaluation.md` | results, protocol, limitations |
 | `docs/data-provenance.md` | where data came from, checks, quirks |
 | `docs/label-mapping.md` | label → ATT&CK mapping and grading rules |
 | `docs/DECISIONS.md` | architecture decision records |

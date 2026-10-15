@@ -84,9 +84,12 @@ if p.exists():
     for sl, systems in res["slices"].items():
         for sysname, e in systems.items():
             if isinstance(e, dict) and "detection" in e:
-                rows.append({"slice": sl, "system": sysname, **{k: e["detection"][k] for k in ("precision", "recall", "f1")},
-                             **{k: e.get("response", {}).get(k) for k in ("technique_accuracy_incident", "grounding_rate")}})
+                rows.append({"slice": sl, "system": sysname,
+                             **{k: e["detection"][k] for k in ("recall", "precision", "f1", "fp")}})
     display(pd.DataFrame(rows))
+    print("pooled over test slices:")
+    display(pd.DataFrame(res["micro_average"]).T)
+    print("hybrid, full pipeline:", res["hybrid_response"])
 else:
     print("results/final.json not found - run scripts/run_eval.py first")
 """),
