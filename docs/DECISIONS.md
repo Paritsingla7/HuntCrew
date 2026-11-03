@@ -199,3 +199,15 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   checked to be byte-for-byte identical for every embedded file.
 - **Consequences:** the notebook is larger (about 170 KB, 42 cells) but can be submitted, shared or opened from
   Drive on its own; it must be regenerated after code changes.
+
+## ADR-030 — The Colab notebook is a short standalone assignment notebook, not a copy of the project
+- **Status:** accepted (supersedes ADR-029)
+- **Context:** the notebook that embedded every project file (42 cells, 24 files) was complete but unreadable as an
+  assignment submission, and the GitHub repository is already the project.
+- **Decision:** `scripts/build_notebook.py` now writes a condensed, readable, standalone notebook (22 cells): it downloads
+  its own data, builds the ATT&CK knowledge base, and runs the detector, threat-intel, strategist and reporter agents with
+  guardrails, policy, an approval gate and code grading, then summarises the full evaluation. The repository remains the
+  full, tested project and is linked from the notebook.
+- **Consequences:** the notebook re-implements the pipeline in condensed form (it is not byte-identical to the package).
+  It is kept honest by tests: it must equal its generator's output, every cell must parse, and a slow test runs it end to
+  end against a stand-in model on the real data.

@@ -2,7 +2,14 @@
 
 Newest entry on top.
 
-## 2026-11-03 — One self-contained Colab notebook; folder renamed
+## 2026-11-04 — Standalone assignment notebook
+- Replaced the 42-cell "whole project" notebook with a short standalone one (22 cells, about 380 lines of code) that shows
+  the agentic part and nothing else: data, RAG, rule candidates, four agents, guardrails, approval gate, grading (ADR-030).
+  The repository is the full project; the notebook links to it.
+- Tested without an API key: stand-in model over the real data and real CrewAI tool calling (78 tests + 1 slow test).
+- Mistral key now rejected (I-022), so the live run is pending (I-023).
+
+## 2026-11-03 — Earlier same-day notebook consolidation; folder renamed
 - The Colab side had three files (notebook, a generator script in `notebooks/`, `requirements-colab.txt`) and the
   notebook depended on cloning the repository. It is now **one file**: `notebooks/huntcrew_colab.ipynb` embeds the
   requirements, config, policy, saved results, fetch script and all 19 package modules (ADR-029). The generator
