@@ -58,8 +58,11 @@ beaconing is mostly missed. Full tables, protocol and limitations: `docs/05-eval
 ## Status
 All phases built, evaluated and verified on Colab. See `docs/PROGRESS.md` and `docs/ISSUES.md`.
 
-**Colab:** open the badge above, run all cells (the first pass installs packages and restarts the session; run
-all again), and add a Colab Secret named `MISTRAL_API_KEY` with notebook access enabled.
+**Colab:** one self-contained notebook, `notebooks/huntcrew_colab.ipynb` (badge above), holds the whole project:
+requirements, config and every source file are written out by its own cells, so nothing is cloned. Add a Colab
+Secret named `MISTRAL_API_KEY` with notebook access enabled, then **Run all** (the first pass installs packages and
+restarts the session on purpose; run all again). It is generated from this repository by
+`python scripts/build_notebook.py`.
 
 ## Quick start
 ```bash

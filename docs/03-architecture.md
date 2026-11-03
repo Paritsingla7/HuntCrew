@@ -68,7 +68,7 @@ agents may see** (middle), **agents whose every output is checked by code** (rig
 | `baselines.py` | B0 rules + fixed map; B1 single prompt |
 | `evaluate.py` | graders and metrics |
 | `scripts/fetch_data.py` | reproducible dataset download + checksums (data is never committed) |
-| `notebooks/` + `build_notebook.py` | Colab submission generated from the package |
+| `notebooks/huntcrew_colab.ipynb` (built by `scripts/build_notebook.py`) | the one self-contained Colab file, generated from the repository |
 
 ## Data contracts
 

@@ -61,12 +61,14 @@ class. Technique naming is weak, and low-and-slow beaconing is mostly missed. Sa
 are for one model. Full protocol and limitations: `05-evaluation.md`, `ISSUES.md`.
 
 ## 4. The Colab version
-**What it is.** `notebooks/huntcrew_colab.ipynb`, generated from the repository by
-`notebooks/build_notebook.py`. It contains no logic of its own: it clones the repo, installs dependencies,
-downloads the two datasets, and calls the same `huntcrew` package used locally.
+**What it is.** One self-contained file, `notebooks/huntcrew_colab.ipynb`. It carries the whole project
+inside it: its requirements, `config.yaml`, the action policy, the saved results, the data-fetch script and
+every module of the `huntcrew` package, each written out by its own `%%writefile` cell. Nothing is cloned and no
+other file is needed. It is generated from the repository by `scripts/build_notebook.py`, so the repository
+stays the single source of truth (and the embedded files are byte-for-byte copies of it).
 
 **What it does when run (about 10–15 minutes on a free CPU runtime).**
-1. Clone the repo and install dependencies (restarts the session once, by design).
+1. Install the packages (restarts the session once, by design), then write out all project files.
 2. Download CIC-IDS2017 and ATT&CK (about 425 MB, checksum-verified).
 3. Set up: load flows, build the 706-chunk ATT&CK knowledge base, wire the agents.
 4. **Live detection** on two windows of the SSH-Patator test slice in hybrid mode.
@@ -74,15 +76,15 @@ downloads the two datasets, and calls the same `huntcrew` package used locally.
    simulated execution, incident report.
 6. **Results table** from the pre-computed full evaluation (`results/final.json`).
 
-**What it does not do.** It does not re-run the full evaluation (about an hour of API calls). That is
-`scripts/run_eval.py`, which can also be run from a Colab cell after the setup cell.
+**What it does not do.** It does not re-run the full evaluation by default (about an hour of API calls). The
+last cell has the one-line command (`scripts/run_eval.py`, also embedded) ready to uncomment.
 
 **How to run it.**
 1. In Colab, open the left sidebar → key icon → **Add new secret**: name `MISTRAL_API_KEY`, value = your key,
    switch **Notebook access** on.
 2. Open https://colab.research.google.com/github/Paritsingla7/HuntCrew/blob/main/notebooks/huntcrew_colab.ipynb
-3. Click **Connect**, then **Runtime → Run all**. Click **Run anyway** on the "not authored by Google" warning
-   (the notebook comes from the project's GitHub repository).
+3. Click **Connect**, then **Runtime → Run all**. If Colab shows a "not authored by Google" warning, click
+   **Run anyway** (the notebook comes from the project's GitHub repository).
 4. The first pass installs packages and restarts the session; Colab shows "session crashed", which is
    expected. Run all again. When asked "Notebook does not have secret access", click **Grant access**.
 5. If a medium/high-risk action is proposed, a prompt `approve? [y/N]` appears under the response cell.

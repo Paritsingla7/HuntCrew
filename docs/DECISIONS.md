@@ -189,3 +189,13 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 - **Consequences:** the weak technique-naming result and the missed low-and-slow beaconing are reported as
   limitations. Any further improvement (for example a union of rule and screening candidates) must be evaluated
   on fresh data or declared as post-hoc.
+
+## ADR-029 — The Colab deliverable is one self-contained notebook
+- **Status:** accepted (supersedes the clone-based notebook of ADR-008/ADR-018)
+- **Context:** the notebook needed the repository (`git clone`), a Colab-specific requirements file and a
+  generator script, which made three Colab-related files and a hidden dependency on GitHub being reachable.
+- **Decision:** `scripts/build_notebook.py` embeds every project file in the notebook as a `%%writefile` cell
+  and lists the requirements inline. The repository remains the source of truth; the notebook is generated and
+  checked to be byte-for-byte identical for every embedded file.
+- **Consequences:** the notebook is larger (about 170 KB, 42 cells) but can be submitted, shared or opened from
+  Drive on its own; it must be regenerated after code changes.

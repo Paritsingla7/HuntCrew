@@ -2,6 +2,13 @@
 
 Newest entry on top.
 
+## 2026-11-03 — One self-contained Colab notebook; folder renamed
+- The Colab side had three files (notebook, a generator script in `notebooks/`, `requirements-colab.txt`) and the
+  notebook depended on cloning the repository. It is now **one file**: `notebooks/huntcrew_colab.ipynb` embeds the
+  requirements, config, policy, saved results, fetch script and all 19 package modules (ADR-029). The generator
+  moved to `scripts/build_notebook.py`; `requirements-colab.txt` was removed.
+- Project folder renamed to `HuntCrew` to match the repository; conda environment is `huntcrew`.
+
 ## 2026-10-15 (night) — P3 Knowledge base
 - `attack_kb.py`: official ATT&CK v20 STIX → 706 chunks (227 techniques + 479 sub-techniques), each joined with
   its official mitigations and detection analytics; local MiniLM embeddings in ChromaDB; every search is
