@@ -36,12 +36,13 @@ class Demo:
 
 def setup(config_path: str | None = None, model: str | None = None, use_colab_secret: bool = True) -> Demo:
     """Load config, data, knowledge base and agents. On Colab the key comes from Colab Secrets."""
+    llmmod.load_dotenv()                                # local runs: a .env file (never overrides the environment)
     if use_colab_secret and not os.environ.get("MISTRAL_API_KEY"):
         try:
             from google.colab import userdata
             os.environ["MISTRAL_API_KEY"] = userdata.get("MISTRAL_API_KEY")
         except Exception:                               # noqa: BLE001 - not on Colab / secret missing
-            llmmod.load_dotenv()
+            pass
     ok, msg = llmmod.check_api_key()
     print("API key check:", msg)
     if not ok:
