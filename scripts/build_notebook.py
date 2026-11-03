@@ -5,7 +5,7 @@
 The notebook is a condensed, readable, self-contained version of the agentic pipeline: no repository clone, no
 helper files. It downloads its own data, builds the ATT&CK knowledge base, and runs four agents (detector,
 threat-intel, strategist, reporter) with code guardrails, a policy and an approval gate. The full, tested
-project (replay simulator, evaluation harness, 76 tests, docs) is the GitHub repository.
+project (replay simulator, evaluation harness, 78 tests, docs) is the GitHub repository.
 """
 from __future__ import annotations
 
@@ -48,9 +48,9 @@ dataset's own labels**, which the agents never see.
 1. Add a Colab Secret named `MISTRAL_API_KEY` (key icon in the left sidebar) and switch *Notebook access* on.
 2. **Runtime -> Run all.** The first pass installs packages and restarts the session on purpose
    (Colab says "session crashed"); run all again and click **Grant access** when asked.
-3. If a risky action is proposed, answer the `approve? [y/N]` prompt in section 7.
+3. If a risky action is proposed, answer the `approve? [y/N]` prompt in section 6.
 
-This notebook is a condensed standalone version. The full project (replay simulator, evaluation harness, 76 tests,
+This notebook is a condensed standalone version. The full project (replay simulator, evaluation harness, 78 tests,
 decision records) is at {REPO_URL}.
 '''),
     md("## 1. Install packages (once)"),
