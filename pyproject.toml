@@ -14,3 +14,6 @@ files = ["src/huntcrew"]
 ignore_missing_imports = true
 warn_unused_ignores = true
 check_untyped_defs = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/support/*" = ["E401", "E402", "E701", "E702", "E731", "F401", "B018"]
