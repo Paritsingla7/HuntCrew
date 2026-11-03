@@ -72,7 +72,7 @@ with retries (the free tier allows about 30 requests a minute), removal of a pro
 Mistral API rejects, and running crews in a worker thread (Jupyter already runs an event loop, which CrewAI refuses).
 '''),
     code('''
-import asyncio, ipaddress, json, os, re, time, urllib.error, urllib.request, warnings
+import asyncio, hashlib, ipaddress, json, os, re, time, urllib.error, urllib.request, warnings
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
@@ -88,12 +88,13 @@ except ImportError:
 if userdata is not None:
     os.environ["MISTRAL_API_KEY"] = userdata.get("MISTRAL_API_KEY").strip()      # asks you to grant access once
 KEY = os.environ.get("MISTRAL_API_KEY", "").strip()
+FINGERPRINT = hashlib.sha256(KEY.encode()).hexdigest()[:8]            # short hash to tell two keys apart; not the key
 try:
     urllib.request.urlopen(urllib.request.Request("https://api.mistral.ai/v1/models",
                            headers={"Authorization": f"Bearer {KEY}"}), timeout=30)
-    print("Mistral key accepted")
+    print(f"Mistral key accepted (length {len(KEY)}, fingerprint {FINGERPRINT})")
 except urllib.error.HTTPError as e:
-    raise SystemExit(f"Mistral rejected the key (HTTP {e.code}, length {len(KEY)}). Re-create the Colab secret MISTRAL_API_KEY.")
+    raise SystemExit(f"Mistral rejected the key (HTTP {e.code}, length {len(KEY)}, fingerprint {FINGERPRINT}). Create a NEW key in the Mistral console and re-create the Colab secret MISTRAL_API_KEY.")
 
 import litellm
 _complete, _last = getattr(litellm.completion, "_orig", litellm.completion), [0.0]      # safe to re-run this cell
