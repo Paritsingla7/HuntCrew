@@ -2,6 +2,13 @@
 
 Newest entry on top.
 
+## 2026-11-04 — Post-hoc cheap baselines (does the LLM earn its place?)
+- Added `cheap_baselines.py` (b2 quantile rule, b3 IsolationForest, b4 rules-AND-b2 filter), config-driven and
+  registry-based, no LLM; `scripts/run_cheap.py`; ADR-031 declares it post-hoc with parameters fixed beforehand.
+- Findings: agent-led (F1 0.17) does not beat b2 (0.21); the LLM verification keeps more true detections than a
+  no-LLM filter (28 vs 19, all from Bot) at somewhat more false positives (40 vs 19). Frozen results unchanged.
+- Tests: 88 passed (10 new). Next in the improvement list: the union-of-candidates experiment (item 2).
+
 ## 2026-11-04 — Standalone assignment notebook
 - Replaced the 42-cell "whole project" notebook with a short standalone one (22 cells, about 380 lines of code) that shows
   the agentic part and nothing else: data, RAG, rule candidates, four agents, guardrails, approval gate, grading (ADR-030).

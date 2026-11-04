@@ -78,9 +78,40 @@ the CIC-IDS2017 authors' labels and the official ATT&CK IDs. No agent grades ano
 - **Everything is for one model** (`ministral-14b-latest`); results may differ with a stronger model.
 - B0's thresholds are hand-made; a heavily tuned rules engine might narrow the precision gap.
 
+## Post-hoc: does the LLM earn its place? (ADR-031, no LLM, same test slices)
+Added after the frozen run, so it is **post-hoc** and kept apart from the headline. Three baselines use no LLM,
+are fitted on the benign Monday only, and have parameters fixed in `config.yaml` before the run (single run,
+no tuning on test). Reproduce with `python scripts/run_cheap.py test`.
+
+| System (pooled, 95 attack-positive pairs) | Recall | Precision | F1 | False positives |
+|---|---|---|---|---|
+| b2 per-feature quantile outlier rule | 0.41 | 0.15 | 0.21 | 229 |
+| b3 IsolationForest | 0.17 | 0.18 | 0.18 | 71 |
+| b4 B0 rules AND b2 (no-LLM triage filter) | 0.20 | **0.50** | 0.29 | **19** |
+| *for comparison, from the frozen run:* Agent-led | 0.36 | 0.11 | 0.17 | 273 |
+| *for comparison, from the frozen run:* Hybrid | 0.29 | 0.41 | **0.34** | 40 |
+
+What this shows:
+1. **The LLM first-pass detector (agent-led) does not beat a trivial statistical rule.** b2 has higher recall (0.41
+   vs 0.36), higher F1 (0.21 vs 0.17) and fewer false positives (229 vs 273), and runs in seconds, with no tokens.
+   b3 ties it on F1 (0.18 vs 0.17). The earlier conclusion that agent-led is not usable on its own is therefore
+   stronger than the original table suggested.
+2. **The LLM verification step adds a real but narrow benefit.** The no-LLM filter b4 removes false positives as
+   well as the LLM does or better (19 vs 40 pooled), but it loses true detections (19 vs 28 kept). The whole gap
+   is the Bot slice: hybrid kept 9 of 73 Bot pairs, b4 only 2, because slow bot traffic does not look anomalous by
+   volume and b4 filters it out. Per slice: hybrid is better on SSH-Patator (F1 0.82 vs 0.75) and Bot (0.18 vs
+   0.05); **b4 is better on PortScan (0.48 vs 0.32)** with the same 5 detections and fewer false positives.
+3. **Dev agrees:** b4 F1 0.57 vs hybrid 0.58 vs B0 0.42 (FTP-Patator, one incident).
+
+Limits of this comparison: one attacker per slice and 95 pairs in total, so the differences are indications, not
+significance-tested rates; b2 is very sensitive to its quantile (dev false positives 187 / 107 / 29 at q = 0.99 /
+0.995 / 0.999, kept at the pre-declared 0.995); b3 and b4 are simple choices, not tuned baselines. Before this
+formal run the same ideas were tried once informally on the test slices (disclosed in ADR-031).
+
 ## Reproduce
 ```bash
 python -I scripts/fetch_data.py
 python scripts/run_eval.py test --systems b0 b1 agent hybrid --out results/test_repro.json   # needs MISTRAL_API_KEY
+python scripts/run_cheap.py test                  # post-hoc no-LLM baselines (ADR-031), no API key needed
 python scripts/make_final_results.py
 ```

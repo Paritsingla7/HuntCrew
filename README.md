@@ -55,6 +55,11 @@ the rules' false positives without losing a detection, keeps every cited techniq
 action inside policy (1.00). **Technique naming is weak (1 of 9 attack-linked incidents)** and low-and-slow
 beaconing is mostly missed. Full tables, protocol and limitations: `docs/05-evaluation.md`.
 
+**Post-hoc check (no LLM, ADR-031):** a plain statistical outlier rule matches or beats the agent-led detector
+(F1 0.21 vs 0.17), so first-pass LLM detection adds nothing here. A no-LLM filter on the rules' output removes
+false positives as well as the LLM does, but keeps fewer true detections (19 vs 28, all from the Bot slice), which
+is the narrow benefit the LLM verification step adds.
+
 ## Status
 All phases built, evaluated and verified on Colab. See `docs/PROGRESS.md` and `docs/ISSUES.md`.
 
