@@ -174,6 +174,41 @@ label, and the model also chose data-exfiltration techniques for two Bot hosts. 
 A reproducibility bug was fixed while measuring this: the judge's candidate order depended on the arrival order of parallel tool
 calls, so re-runs changed the answer. The numbers above are from the fixed code, identical across two runs.
 
+## Fresh data: do the conclusions hold? (ADR-037; never-used attack families and time ranges; one run, frozen prompts)
+57 attack-positive (window, source) pairs in 5 slices: Bot (stretch outside the test slice) 24, web attacks 16, DoS 10, DDoS 5,
+PortScan (stretch outside the test slice) 2. True positives / false positives per slice:
+
+| Slice (positives) | B0 | b2 | b3 | b4 | Hybrid | Agent-led |
+|---|---|---|---|---|---|---|
+| bot_fresh_pm (24) | 2 / 17 | 0 / 10 | 0 / 1 | 0 / 1 | 1 / 13 | 3 / 48 |
+| portscan_fresh (2) | 0 / 12 | 0 / 24 | 0 / 6 | 0 / 0 | 0 / 11 | not run |
+| ddos_fri (5) | 0 / 16 | **5** / 23 | 0 / 8 | 0 / 7 | 0 / 11 | not run |
+| dos_wed (10) | 0 / 22 | **9** / 55 | **6** / 18 | 0 / 19 | 0 / 16 | not run |
+| web_thu (16) | 0 / 31 | 0 / 65 | 0 / 31 | 0 / 13 | 0 / 19 | not run |
+| **pooled** | F1 0.03 | **F1 0.11** | F1 0.09 | F1 0.00 | F1 0.02 | n/a |
+
+Pooled precision / recall / F1: B0 0.02 / 0.04 / 0.03; b2 0.07 / 0.25 / 0.11 (interval 0.08 to 0.14); b3 0.09 / 0.10 / 0.09;
+b4 0 / 0 / 0; hybrid 0.01 / 0.02 / 0.02 (1 detection, 70 false positives).
+
+**Reading: the earlier conclusions do not carry over to attacks the rules were not written for.**
+- The hybrid, the project's primary system, detects almost nothing here, by construction: rules propose its candidates and none of
+  them covers DoS, DDoS or web attacks (B0 has zero recall on those). Its test-slice advantage came from attack types the rules were
+  written for. It is a triage layer for a rule set, not a general detector.
+- The only thing that found the new volumetric attacks is the plain volume rule b2 (DDoS 5 of 5, DoS 9 of 10) and, partly,
+  IsolationForest (DoS 6 of 10). Low-volume web attacks (brute force, XSS, SQL injection from one source) were found by nothing;
+  Bot on this unused stretch was found by almost nothing (best: agent-led 3 of 24 with 48 false positives).
+- The hybrid and b4 comparison reverses nothing statistically (hybrid - b4 +0.015, interval +0.000 to +0.047) because both are near zero.
+- Guardrails kept working on new families: grounding 1.00 on every slice; policy pass rate 0.87 to 0.95 on four of five slices
+  (the code rejected actions on protected assets or malformed targets; none reached the simulated environment).
+
+**Not complete:** the agent-led system finished only `bot_fresh_pm` (12 windows) and 8 of 12 `portscan_fresh` windows. The provider
+returned "backend out of capacity" for `ministral-14b` on every request for about 45 minutes, including a minimal one, while other
+models answered. The remaining windows are not scored. Resume with
+`python scripts/run_eval.py fresh --systems agent --no-downstream` (the run is resumable and the finished windows are kept).
+
+**Small:** 57 positives, one attacker per attack family, two PortScan pairs. This supports "the conclusions are not general", not any
+precise rate.
+
 ## Reproduce
 ```bash
 python -I scripts/fetch_data.py

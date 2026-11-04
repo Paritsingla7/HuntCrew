@@ -59,7 +59,7 @@ def evaluate_split(cfg: dict, data, split: str, model: CheapModel, known: set[st
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("split", choices=["dev", "test"])
+    ap.add_argument("split", choices=["dev", "test", "fresh"])
     ap.add_argument("--out", default=None)
     ap.add_argument("--q-sweep", nargs="+", type=float,
                     help="dev only: also report the quantile baseline (b2) at these q values")

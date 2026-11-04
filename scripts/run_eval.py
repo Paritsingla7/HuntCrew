@@ -35,7 +35,7 @@ from huntcrew.response import Policy, SimulatedEnvironment, auto_deny  # noqa: E
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("split", choices=["dev", "test"])
+    ap.add_argument("split", choices=["dev", "test", "fresh"])
     ap.add_argument("--systems", nargs="+", default=["b0", "b1", "hybrid"],
                     choices=["b0", "b1", "agent", "hybrid", "union"])
     ap.add_argument("--names", nargs="*", help="slice names (default: all in the split)")

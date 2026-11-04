@@ -1,0 +1,110 @@
+{
+  "split": "fresh",
+  "post_hoc": true,
+  "adr": "ADR-033",
+  "n": 2000,
+  "seed": 0,
+  "level": 0.95,
+  "unit": "replay window, resampled within each slice, same windows for every system",
+  "systems": {
+    "b0": {
+      "precision": 0.02,
+      "recall": 0.035,
+      "f1": 0.025,
+      "f1_ci": [
+        0.0,
+        0.06
+      ],
+      "recall_ci": [
+        0.0,
+        0.086
+      ],
+      "precision_ci": [
+        0.0,
+        0.045
+      ]
+    },
+    "b2": {
+      "precision": 0.073,
+      "recall": 0.246,
+      "f1": 0.113,
+      "f1_ci": [
+        0.081,
+        0.141
+      ],
+      "recall_ci": [
+        0.179,
+        0.305
+      ],
+      "precision_ci": [
+        0.052,
+        0.091
+      ]
+    },
+    "b3": {
+      "precision": 0.086,
+      "recall": 0.105,
+      "f1": 0.094,
+      "f1_ci": [
+        0.046,
+        0.141
+      ],
+      "recall_ci": [
+        0.049,
+        0.164
+      ],
+      "precision_ci": [
+        0.041,
+        0.125
+      ]
+    },
+    "b4": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "f1_ci": [
+        0.0,
+        0.0
+      ],
+      "recall_ci": [
+        0.0,
+        0.0
+      ],
+      "precision_ci": [
+        0.0,
+        0.0
+      ]
+    },
+    "hybrid": {
+      "precision": 0.014,
+      "recall": 0.018,
+      "f1": 0.016,
+      "f1_ci": [
+        0.0,
+        0.047
+      ],
+      "recall_ci": [
+        0.0,
+        0.056
+      ],
+      "precision_ci": [
+        0.0,
+        0.042
+      ]
+    }
+  },
+  "f1_differences": {
+    "hybrid - b0": {
+      "mean": -0.01,
+      "lo": -0.038,
+      "hi": 0.007,
+      "share_positive": 0.247
+    },
+    "hybrid - b4": {
+      "mean": 0.015,
+      "lo": 0.0,
+      "hi": 0.047,
+      "share_positive": 0.647
+    }
+  }
+}

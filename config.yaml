@@ -28,7 +28,9 @@ replay:
   history_windows: 12          # how far back the agent's tools may look; never forward
 
 labels:
-  in_scope: [BENIGN, FTP-Patator, SSH-Patator, Bot, PortScan]
+  in_scope: [BENIGN, FTP-Patator, SSH-Patator, Bot, PortScan,
+             DoS Hulk, DoS GoldenEye, DoS slowloris, DoS Slowhttptest, DDoS,
+             "Web Attack – Brute Force", "Web Attack – XSS", "Web Attack – Sql Injection"]   # last 8: fresh split, ADR-037
   # Hand-made mapping, published in docs/label-mapping.md. Grading is parent-level:
   # a truth of T1110 accepts T1110 or any T1110.xxx sub-technique.
   to_technique:
@@ -36,6 +38,17 @@ labels:
     SSH-Patator: T1110
     Bot: T1071
     PortScan: T1046
+    # Added for the fresh split (ADR-037), fixed before any fresh result. HTTP floods and slow-HTTP attacks exhaust the
+    # web service: Endpoint Denial of Service. Web login guessing is Brute Force; XSS and SQL injection exploit a
+    # public-facing web application.
+    DoS Hulk: T1499
+    DoS GoldenEye: T1499
+    DoS slowloris: T1499
+    DoS Slowhttptest: T1499
+    DDoS: T1499
+    "Web Attack – Brute Force": T1110
+    "Web Attack – XSS": T1190
+    "Web Attack – Sql Injection": T1190
   match_level: parent
 
 # Pre-registered on 2026-10-15, before any detector result existed (ADR-019). Do not edit after results.
@@ -48,6 +61,15 @@ splits:
     - {name: ssh_patator, start: "2017-07-04 14:00", end: "2017-07-04 15:30"}
     - {name: bot,         start: "2017-07-07 10:00", end: "2017-07-07 12:00"}
     - {name: portscan,    start: "2017-07-07 14:00", end: "2017-07-07 15:30"}
+  # Never used by any earlier run (ADR-037): other attack families (Wed DoS, Thu web attacks, Fri DDoS) and unused
+  # stretches of the same Bot and PortScan activity. Declared on 2026-11-04 before any system was run on them.
+  # (A 09:30-10:00 Bot stretch was dropped: it has no attack-positive pair under the grading rule, from labels alone.)
+  fresh:
+    - {name: bot_fresh_pm,    start: "2017-07-07 12:00", end: "2017-07-07 13:00"}
+    - {name: portscan_fresh,  start: "2017-07-07 13:00", end: "2017-07-07 14:00"}
+    - {name: ddos_fri,        start: "2017-07-07 15:45", end: "2017-07-07 16:30"}
+    - {name: dos_wed,         start: "2017-07-05 10:30", end: "2017-07-05 11:30"}
+    - {name: web_thu,         start: "2017-07-06 09:00", end: "2017-07-06 10:45"}
 
 # B0 baseline only (a classic rules engine). The agent detector does NOT use these.
 baseline_rules:                # evaluated per replay window
