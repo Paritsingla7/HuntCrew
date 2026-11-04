@@ -64,3 +64,18 @@ decision_gate:
 # this many attack-labelled flows from that source in the window.
 grading:
   min_attack_flows: 5
+
+# Post-hoc, no-LLM comparison baselines (ADR-031, added 2026-11-04 AFTER the frozen test run, so they are
+# reported as post-hoc). Every value was fixed before the formal run, was not chosen from test results, and
+# is fitted on `baseline_benign` only. Features are per (window, source) and use the current window alone.
+cheap_baselines:
+  min_flows: 10                # a source needs at least this many flows in the window to be flagged
+  features: [flows, dst_ips, dst_ports, fwd_bytes, syn, rst, max_ports_per_dst, top_port_share]
+  quantile:                    # b2: flag if any feature exceeds its q-quantile over benign (window, source) rows
+    q: 0.995
+  isolation_forest:            # b3: unsupervised outlier score; flag above the benign-score quantile
+    n_estimators: 200
+    flag_quantile: 0.995
+    random_state: 0
+  # b4 = B0 rule findings kept only when b2 also flags the source: the "no-LLM triage filter" that the
+  # hybrid's LLM verification has to beat.
