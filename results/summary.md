@@ -33,3 +33,12 @@ Post-hoc, no-LLM comparison baselines (ADR-031; same test slices, parameters fix
 | **all test slices** | b2 quantile outlier rule | 0.41 | 0.15 | 0.21 | 229 | |
 | **all test slices** | b3 IsolationForest | 0.17 | 0.18 | 0.18 | 71 | |
 | **all test slices** | b4 B0 rules AND b2 (no-LLM triage filter) | 0.20 | 0.50 | 0.29 | 19 | |
+
+Post-hoc union of rule and screening candidates, verified by the agent (ADR-032):
+
+| Slice | System | Recall | Precision | F1 | FP |
+|---|---|---|---|---|---|
+| ssh_patator | Union | 1.00 | 0.17 | 0.30 | 66 |
+| bot | Union | 0.32 | 0.18 | 0.23 | 101 |
+| portscan | Union | 0.62 | 0.06 | 0.11 | 80 |
+| **all test slices** | Union | 0.44 | 0.14 | 0.22 | 247 |

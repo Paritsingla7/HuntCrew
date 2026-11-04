@@ -62,6 +62,15 @@ if cheap_test.is_file():
         "slices": ct["slices"],
         **({"dev": json.loads(cheap_dev.read_text())} if cheap_dev.is_file() else {}),
     }
+union_test, union_dev = R / "test_union.json", R / "dev_union.json"
+if union_test.is_file():
+    ut = json.loads(union_test.read_text())["slices"]
+    final["post_hoc_union"] = {
+        "adr": "ADR-032", "criterion": "pooled test F1 > 0.344 (hybrid) without lowering recall 0.295",
+        "micro_average": micro(ut, "union"), "slices": ut,
+        **({"dev": json.loads(union_dev.read_text())["slices"]} if union_dev.is_file() else {})}
+    final["post_hoc_union"]["criterion_met"] = (final["post_hoc_union"]["micro_average"]["f1"] > summary["hybrid"]["f1"]
+                                                and final["post_hoc_union"]["micro_average"]["recall"] >= summary["hybrid"]["recall"])
 (R / "final.json").write_text(json.dumps(final, indent=2), encoding="utf-8")
 
 lines = ["| Slice | System | Recall | Precision | F1 | FP | Window recall |", "|---|---|---|---|---|---|---|"]
@@ -82,6 +91,14 @@ if cheap_test.is_file():
     for k in POST_HOC:
         m = final["post_hoc_cheap_baselines"]["micro_average"][k]
         lines.append(f"| **all test slices** | {POST_LABEL[k]} | {m['recall']:.2f} | {m['precision']:.2f} | {m['f1']:.2f} | {m['fp']} | |")
+if union_test.is_file():
+    m = final["post_hoc_union"]["micro_average"]
+    lines += ["", "Post-hoc union of rule and screening candidates, verified by the agent (ADR-032):", "",
+              "| Slice | System | Recall | Precision | F1 | FP |", "|---|---|---|---|---|---|"]
+    for sl, systems in ut.items():
+        d = systems["union"]["detection"]
+        lines.append(f"| {sl} | Union | {d['recall']:.2f} | {d['precision']:.2f} | {d['f1']:.2f} | {d['fp']} |")
+    lines.append(f"| **all test slices** | Union | {m['recall']:.2f} | {m['precision']:.2f} | {m['f1']:.2f} | {m['fp']} |")
 (R / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 print("\n".join(lines))
 print(json.dumps(hybrid_response, indent=1))

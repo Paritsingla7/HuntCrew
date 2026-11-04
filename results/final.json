@@ -830,5 +830,130 @@
       },
       "seconds": 7.8
     }
+  },
+  "post_hoc_union": {
+    "adr": "ADR-032",
+    "criterion": "pooled test F1 > 0.344 (hybrid) without lowering recall 0.295",
+    "micro_average": {
+      "tp": 42,
+      "fp": 247,
+      "fn": 53,
+      "precision": 0.145,
+      "recall": 0.442,
+      "f1": 0.219
+    },
+    "slices": {
+      "ssh_patator": {
+        "windows": 18,
+        "union": {
+          "detection": {
+            "truth_positives": 14,
+            "predicted_positives": 80,
+            "tp": 14,
+            "fp": 66,
+            "fn": 0,
+            "precision": 0.175,
+            "recall": 1.0,
+            "f1": 0.298,
+            "window_recall": 1.0,
+            "technique_accuracy_on_tp": 0.929
+          },
+          "incidents": 49,
+          "llm": {
+            "calls": 103,
+            "cache_hits": 55,
+            "retries": 0,
+            "prompt_tokens": 671379,
+            "completion_tokens": 33236,
+            "waited_s": 24.1
+          },
+          "seconds": 740.7
+        }
+      },
+      "bot": {
+        "windows": 24,
+        "union": {
+          "detection": {
+            "truth_positives": 73,
+            "predicted_positives": 124,
+            "tp": 23,
+            "fp": 101,
+            "fn": 50,
+            "precision": 0.185,
+            "recall": 0.315,
+            "f1": 0.234,
+            "window_recall": 0.458,
+            "technique_accuracy_on_tp": 0.217
+          },
+          "incidents": 77,
+          "llm": {
+            "calls": 109,
+            "cache_hits": 91,
+            "retries": 0,
+            "prompt_tokens": 789533,
+            "completion_tokens": 45686,
+            "waited_s": 25.7
+          },
+          "seconds": 923.2
+        }
+      },
+      "portscan": {
+        "windows": 18,
+        "union": {
+          "detection": {
+            "truth_positives": 8,
+            "predicted_positives": 85,
+            "tp": 5,
+            "fp": 80,
+            "fn": 3,
+            "precision": 0.059,
+            "recall": 0.625,
+            "f1": 0.108,
+            "window_recall": 0.625,
+            "technique_accuracy_on_tp": 0.0
+          },
+          "incidents": 60,
+          "llm": {
+            "calls": 102,
+            "cache_hits": 55,
+            "retries": 0,
+            "prompt_tokens": 721693,
+            "completion_tokens": 36369,
+            "waited_s": 31.2
+          },
+          "seconds": 664.7
+        }
+      }
+    },
+    "dev": {
+      "ftp_patator": {
+        "windows": 21,
+        "union": {
+          "detection": {
+            "truth_positives": 14,
+            "predicted_positives": 99,
+            "tp": 13,
+            "fp": 86,
+            "fn": 1,
+            "precision": 0.131,
+            "recall": 0.929,
+            "f1": 0.23,
+            "window_recall": 0.929,
+            "technique_accuracy_on_tp": 0.154
+          },
+          "incidents": 52,
+          "llm": {
+            "calls": 116,
+            "cache_hits": 70,
+            "retries": 4,
+            "prompt_tokens": 884535,
+            "completion_tokens": 46616,
+            "waited_s": 63.8
+          },
+          "seconds": 803.2
+        }
+      }
+    },
+    "criterion_met": false
   }
 }
