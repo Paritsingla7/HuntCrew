@@ -8,6 +8,10 @@ R = Path("results")
 FROZEN = "19b8682"
 SYSTEMS = ["b0", "b1", "agent", "hybrid"]
 LABEL = {"b0": "B0 rules", "b1": "B1 single prompt", "agent": "Agent-led", "hybrid": "Hybrid (rules + agent)"}
+# Post-hoc, no-LLM comparison baselines (ADR-031). Kept in their own block; the frozen results above are unchanged.
+POST_HOC = ["b2", "b3", "b4"]
+POST_LABEL = {"b2": "b2 quantile outlier rule", "b3": "b3 IsolationForest",
+              "b4": "b4 B0 rules AND b2 (no-LLM triage filter)"}
 
 
 def merge(*files: str) -> dict:
@@ -49,6 +53,15 @@ hybrid_response = {
 
 final = {"split": "test", "model": model, "frozen_commit": FROZEN, "slices": test, "micro_average": summary,
          "hybrid_response": hybrid_response, "dev": dev}
+cheap_test, cheap_dev = R / "test_cheap.json", R / "dev_cheap.json"
+if cheap_test.is_file():
+    ct = json.loads(cheap_test.read_text())
+    final["post_hoc_cheap_baselines"] = {
+        "adr": "ADR-031", "note": "post-hoc, no LLM; parameters fixed before the run (config.yaml: cheap_baselines)",
+        "config": ct["config"], "micro_average": {k: micro(ct["slices"], k) for k in POST_HOC},
+        "slices": ct["slices"],
+        **({"dev": json.loads(cheap_dev.read_text())} if cheap_dev.is_file() else {}),
+    }
 (R / "final.json").write_text(json.dumps(final, indent=2), encoding="utf-8")
 
 lines = ["| Slice | System | Recall | Precision | F1 | FP | Window recall |", "|---|---|---|---|---|---|---|"]
@@ -59,6 +72,16 @@ for sl, systems in test.items():
 for s in SYSTEMS:
     m = summary[s]
     lines.append(f"| **all test slices** | {LABEL[s]} | {m['recall']:.2f} | {m['precision']:.2f} | {m['f1']:.2f} | {m['fp']} | |")
+if cheap_test.is_file():
+    lines += ["", "Post-hoc, no-LLM comparison baselines (ADR-031; same test slices, parameters fixed beforehand):", "",
+              "| Slice | System | Recall | Precision | F1 | FP | Window recall |", "|---|---|---|---|---|---|---|"]
+    for sl, systems in ct["slices"].items():
+        for k in POST_HOC:
+            d = systems[k]["detection"]
+            lines.append(f"| {sl} | {POST_LABEL[k]} | {d['recall']:.2f} | {d['precision']:.2f} | {d['f1']:.2f} | {d['fp']} | {d['window_recall']:.2f} |")
+    for k in POST_HOC:
+        m = final["post_hoc_cheap_baselines"]["micro_average"][k]
+        lines.append(f"| **all test slices** | {POST_LABEL[k]} | {m['recall']:.2f} | {m['precision']:.2f} | {m['f1']:.2f} | {m['fp']} | |")
 (R / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 print("\n".join(lines))
 print(json.dumps(hybrid_response, indent=1))
