@@ -79,3 +79,15 @@ cheap_baselines:
     random_state: 0
   # b4 = B0 rule findings kept only when b2 also flags the source: the "no-LLM triage filter" that the
   # hybrid's LLM verification has to beat.
+
+# Uncertainty report (ADR-033): paired bootstrap over replay windows, computed from saved per-window predictions.
+bootstrap:
+  n: 2000
+  seed: 0
+  level: 0.95
+  comparisons:                 # [a, b] -> interval for F1(a) - F1(b); post-hoc comparisons, listed once, here
+    - [hybrid, b0]
+    - [hybrid, agent]
+    - [hybrid, b4]
+    - [agent, b2]
+    - [union, hybrid]

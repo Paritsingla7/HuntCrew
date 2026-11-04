@@ -1,0 +1,139 @@
+{
+  "split": "test",
+  "post_hoc": true,
+  "adr": "ADR-033",
+  "n": 2000,
+  "seed": 0,
+  "level": 0.95,
+  "unit": "replay window, resampled within each slice, same windows for every system",
+  "systems": {
+    "b0": {
+      "precision": 0.269,
+      "recall": 0.295,
+      "f1": 0.281,
+      "f1_ci": [
+        0.201,
+        0.358
+      ],
+      "recall_ci": [
+        0.205,
+        0.385
+      ],
+      "precision_ci": [
+        0.194,
+        0.342
+      ]
+    },
+    "b2": {
+      "precision": 0.146,
+      "recall": 0.411,
+      "f1": 0.215,
+      "f1_ci": [
+        0.155,
+        0.274
+      ],
+      "recall_ci": [
+        0.318,
+        0.494
+      ],
+      "precision_ci": [
+        0.101,
+        0.194
+      ]
+    },
+    "b3": {
+      "precision": 0.184,
+      "recall": 0.168,
+      "f1": 0.176,
+      "f1_ci": [
+        0.102,
+        0.243
+      ],
+      "recall_ci": [
+        0.099,
+        0.235
+      ],
+      "precision_ci": [
+        0.103,
+        0.264
+      ]
+    },
+    "b4": {
+      "precision": 0.5,
+      "recall": 0.2,
+      "f1": 0.286,
+      "f1_ci": [
+        0.211,
+        0.352
+      ],
+      "recall_ci": [
+        0.141,
+        0.258
+      ],
+      "precision_ci": [
+        0.386,
+        0.622
+      ]
+    },
+    "agent": {
+      "precision": 0.111,
+      "recall": 0.358,
+      "f1": 0.169,
+      "f1_ci": [
+        0.122,
+        0.219
+      ],
+      "recall_ci": [
+        0.276,
+        0.432
+      ],
+      "precision_ci": [
+        0.077,
+        0.148
+      ]
+    },
+    "hybrid": {
+      "precision": 0.412,
+      "recall": 0.295,
+      "f1": 0.344,
+      "f1_ci": [
+        0.245,
+        0.44
+      ],
+      "recall_ci": [
+        0.205,
+        0.385
+      ],
+      "precision_ci": [
+        0.296,
+        0.522
+      ]
+    }
+  },
+  "f1_differences": {
+    "hybrid - b0": {
+      "mean": 0.062,
+      "lo": 0.042,
+      "hi": 0.085,
+      "share_positive": 1.0
+    },
+    "hybrid - agent": {
+      "mean": 0.172,
+      "lo": 0.081,
+      "hi": 0.261,
+      "share_positive": 1.0
+    },
+    "hybrid - b4": {
+      "mean": 0.056,
+      "lo": -0.022,
+      "hi": 0.135,
+      "share_positive": 0.914
+    },
+    "agent - b2": {
+      "mean": -0.045,
+      "lo": -0.092,
+      "hi": -0.0,
+      "share_positive": 0.024
+    }
+  }
+}
