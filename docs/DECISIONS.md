@@ -342,3 +342,6 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 - **Limits:** three small models and one 14B model cover a narrow size range and two model families' worth of variation at best;
   a flat or noisy trend would not show that a much larger model would not help. Models differ in more than size.
 - **Consequences:** per-model throttle limits are configuration (`llm.model_limits`), run files are separated with `--run-tag`.
+- **Result (test, one run each):** pooled F1 0.26 (3b), 0.31 (8b), 0.26 (nemo), 0.34 (14b, frozen). A mild upward direction inside
+  the Ministral family, within the noise of the bootstrap intervals; naming not rankable (different incident sets, n of 5 to 9).
+  Guardrail rejections rise on weaker models (policy pass 0.88 to 0.89). See `docs/05-evaluation.md`.

@@ -209,6 +209,31 @@ models answered. The remaining windows are not scored. Resume with
 **Small:** 57 positives, one attacker per attack family, two PortScan pairs. This supports "the conclusions are not general", not any
 precise rate.
 
+## Model size, within what this key can use (ADR-038, post-hoc, hybrid system, test slices, one run each)
+Larger Mistral models (small, medium, large, magistral) are not usable on this key, so a "stronger model" test was not possible; this
+compares the models that are, with the frozen prompts and no per-model tuning (`scripts/make_sweep_table.py`).
+
+| Model (hybrid, test slices) | Recall | Precision | F1 | FP | Technique (strict) | Technique (tactic) | Grounding | Policy | LLM calls | Tokens | Minutes |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| ministral-3b | 0.21 | 0.33 | 0.26 | 40 | 0/5 | 0/5 | 1.00 | 1.00 | 289 | 1014k | 21 |
+| ministral-8b | 0.25 | 0.40 | 0.31 | 36 | 3/7 | 3/7 | 0.97 | 0.89 | 544 | 1436k | 32 |
+| open-mistral-nemo | 0.21 | 0.34 | 0.26 | 39 | 3/5 | 4/5 | 1.00 | 0.88 | 379 | 773k | 16 |
+| ministral-14b (frozen run) | 0.29 | 0.41 | 0.34 | 40 | 1/9 | 6/9 | 1.00 | 1.00 | 325 | 550k | 18 |
+
+- **Detection rises mildly with size inside the Ministral family** (F1 0.26, 0.31, 0.34 for 3b, 8b, 14b), but the steps are 0.03 to
+  0.05 and the bootstrap intervals of the same kind elsewhere in this file are about plus or minus 0.1, so this is a direction, not a
+  ranking. open-mistral-nemo (a different family) matches 3b (0.26).
+- **Naming cannot be ranked by size at this sample.** Each model's naming figure rests on a different set of attack-linked
+  incidents (3b 5, 8b 7, nemo 5, 14b 9: one SSH, one PortScan and 3 to 7 Bot incidents), and who gets which right varies (8b and nemo
+  name the PortScan correctly, 14b does not; 14b and nemo name SSH-Patator correctly, 3b and 8b do not). Do not read nemo's 3/5 against
+  14b's 1/9 as nemo being better.
+- **The guardrails do work on weaker models.** Policy pass rate falls to 0.88 to 0.89 for 8b and nemo and grounding to 0.97 for 8b:
+  that is the code rejecting actions (protected assets, malformed targets) and uncited technique IDs that the model produced.
+  Nothing rejected reached the simulated environment.
+- **Cost:** token use is not monotonic in size (8b used the most, 1.4M, from longer tool loops).
+- **Limit:** a narrow size range and one run each. A flat or noisy trend would not show that a much larger model would not help,
+  and models differ in more than size.
+
 ## Reproduce
 ```bash
 python -I scripts/fetch_data.py
