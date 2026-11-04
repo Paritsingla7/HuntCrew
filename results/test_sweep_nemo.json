@@ -1,0 +1,147 @@
+{
+  "split": "test",
+  "model": "mistral/open-mistral-nemo",
+  "slices": {
+    "ssh_patator": {
+      "windows": 18,
+      "hybrid": {
+        "detection": {
+          "truth_positives": 14,
+          "predicted_positives": 20,
+          "tp": 13,
+          "fp": 7,
+          "fn": 1,
+          "precision": 0.65,
+          "recall": 0.929,
+          "f1": 0.765,
+          "window_recall": 0.929,
+          "technique_accuracy_on_tp": 0.077
+        },
+        "incidents": 5,
+        "response": {
+          "incidents": 5,
+          "attack_linked_incidents": 1,
+          "incident_precision": 0.2,
+          "technique_accuracy_incident": 1.0,
+          "grounding_rate": 1.0,
+          "policy_pass_rate": 1.0,
+          "mitigation_grounded_share": 0.25,
+          "proposed_actions": 4
+        },
+        "environment": {
+          "blocked_ips": 2,
+          "rate_limited": 2,
+          "blocked_domains": 0,
+          "isolated_hosts": 0,
+          "disabled_accounts": 0,
+          "password_resets": 0,
+          "waf_rules": 0,
+          "tickets": 0
+        },
+        "llm": {
+          "calls": 102,
+          "cache_hits": 0,
+          "retries": 0,
+          "prompt_tokens": 196065,
+          "completion_tokens": 26439,
+          "waited_s": 0.0
+        },
+        "seconds": 248.8
+      }
+    },
+    "bot": {
+      "windows": 24,
+      "hybrid": {
+        "detection": {
+          "truth_positives": 73,
+          "predicted_positives": 19,
+          "tp": 3,
+          "fp": 16,
+          "fn": 70,
+          "precision": 0.158,
+          "recall": 0.041,
+          "f1": 0.065,
+          "window_recall": 0.125,
+          "technique_accuracy_on_tp": 0.0
+        },
+        "incidents": 13,
+        "response": {
+          "incidents": 13,
+          "attack_linked_incidents": 3,
+          "incident_precision": 0.231,
+          "technique_accuracy_incident": 0.333,
+          "grounding_rate": 1.0,
+          "policy_pass_rate": 0.88,
+          "mitigation_grounded_share": 0.64,
+          "proposed_actions": 25
+        },
+        "environment": {
+          "blocked_ips": 6,
+          "rate_limited": 4,
+          "blocked_domains": 0,
+          "isolated_hosts": 0,
+          "disabled_accounts": 0,
+          "password_resets": 0,
+          "waf_rules": 0,
+          "tickets": 3
+        },
+        "llm": {
+          "calls": 145,
+          "cache_hits": 0,
+          "retries": 0,
+          "prompt_tokens": 242865,
+          "completion_tokens": 45394,
+          "waited_s": 0.0
+        },
+        "seconds": 371.0
+      }
+    },
+    "portscan": {
+      "windows": 18,
+      "hybrid": {
+        "detection": {
+          "truth_positives": 8,
+          "predicted_positives": 20,
+          "tp": 4,
+          "fp": 16,
+          "fn": 4,
+          "precision": 0.2,
+          "recall": 0.5,
+          "f1": 0.286,
+          "window_recall": 0.5,
+          "technique_accuracy_on_tp": 0.0
+        },
+        "incidents": 11,
+        "response": {
+          "incidents": 11,
+          "attack_linked_incidents": 1,
+          "incident_precision": 0.091,
+          "technique_accuracy_incident": 1.0,
+          "grounding_rate": 1.0,
+          "policy_pass_rate": 1.0,
+          "mitigation_grounded_share": 0.579,
+          "proposed_actions": 19
+        },
+        "environment": {
+          "blocked_ips": 5,
+          "rate_limited": 7,
+          "blocked_domains": 0,
+          "isolated_hosts": 0,
+          "disabled_accounts": 0,
+          "password_resets": 0,
+          "waf_rules": 0,
+          "tickets": 2
+        },
+        "llm": {
+          "calls": 132,
+          "cache_hits": 0,
+          "retries": 0,
+          "prompt_tokens": 223854,
+          "completion_tokens": 37969,
+          "waited_s": 0.0
+        },
+        "seconds": 328.4
+      }
+    }
+  }
+}

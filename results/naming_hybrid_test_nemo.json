@@ -1,0 +1,131 @@
+{
+  "system": "hybrid",
+  "model": "mistral/open-mistral-nemo",
+  "attack_linked_incidents": 5,
+  "strict_correct": 3,
+  "tactic_correct": 4,
+  "strict_accuracy": 0.6,
+  "tactic_accuracy": 0.8,
+  "by_slice": {
+    "ssh_patator": {
+      "n": 1,
+      "strict": 1,
+      "tactic": 1
+    },
+    "bot": {
+      "n": 3,
+      "strict": 1,
+      "tactic": 2
+    },
+    "portscan": {
+      "n": 1,
+      "strict": 1,
+      "tactic": 1
+    }
+  },
+  "incidents": [
+    {
+      "slice": "ssh_patator",
+      "entity": "172.16.0.1",
+      "truth": [
+        "T1110"
+      ],
+      "assessed": [
+        [
+          "T1110",
+          1.0
+        ],
+        [
+          "T1110.001",
+          1.0
+        ]
+      ],
+      "strict_ok": true,
+      "tactic_ok": true
+    },
+    {
+      "slice": "bot",
+      "entity": "192.168.10.5",
+      "truth": [
+        "T1071"
+      ],
+      "assessed": [
+        [
+          "T1046",
+          0.8
+        ],
+        [
+          "T1595.002",
+          0.6
+        ]
+      ],
+      "strict_ok": false,
+      "tactic_ok": false
+    },
+    {
+      "slice": "bot",
+      "entity": "192.168.10.15",
+      "truth": [
+        "T1071"
+      ],
+      "assessed": [
+        [
+          "T1001",
+          0.8
+        ],
+        [
+          "T1071.004",
+          0.8
+        ]
+      ],
+      "strict_ok": true,
+      "tactic_ok": true
+    },
+    {
+      "slice": "bot",
+      "entity": "192.168.10.9",
+      "truth": [
+        "T1071"
+      ],
+      "assessed": [
+        [
+          "T1567",
+          0.8
+        ],
+        [
+          "T1102.002",
+          0.7
+        ]
+      ],
+      "strict_ok": false,
+      "tactic_ok": true
+    },
+    {
+      "slice": "portscan",
+      "entity": "172.16.0.1",
+      "truth": [
+        "T1046"
+      ],
+      "assessed": [
+        [
+          "T1595.002",
+          0.9
+        ],
+        [
+          "T1046",
+          0.9
+        ]
+      ],
+      "strict_ok": true,
+      "tactic_ok": true
+    }
+  ],
+  "llm": {
+    "calls": 0,
+    "cache_hits": 18,
+    "retries": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "waited_s": 0.0
+  }
+}
