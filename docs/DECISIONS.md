@@ -211,3 +211,23 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 - **Consequences:** the notebook re-implements the pipeline in condensed form (it is not byte-identical to the package).
   It is kept honest by tests: it must equal its generator's output, every cell must parse, and a slow test runs it end to
   end against a stand-in model on the real data.
+
+## ADR-031 — Post-hoc cheap (no-LLM) baselines, to test whether the LLM earns its place
+- **Status:** accepted (post-hoc: written after the frozen test run of ADR-028; reported as such)
+- **Context:** an external review of the project found two open questions the frozen evaluation could not answer:
+  (1) does the agent-led detector beat a trivial statistical anomaly detector, and (2) does the hybrid's LLM
+  verification beat a non-LLM filter placed on the same rule findings? Both need baselines that use no LLM.
+- **Decision:** add three baselines, all code, all fitted on the benign Monday only, none using labels:
+  **b2** per-feature 99.5th-percentile outlier rule; **b3** IsolationForest outlier score; **b4** B0 rule findings
+  kept only when b2 also flags the source. They are config-driven (`cheap_baselines` in `config.yaml`), registered in
+  `src/huntcrew/cheap_baselines.py`, graded by the unchanged grader.
+- **Declared before the formal run:** every parameter above was set a priori (round-number defaults), not tuned on
+  test. Sensitivity of b2 to `q` is reported on the dev slice only.
+- **Disclosure:** before this ADR the reviewer ran informal versions of b2, b3 and b4 once on the test slices to
+  see whether the idea was worth pursuing (b2 F1 0.21, b3 F1 0.17, b4 F1 0.29). The formal implementation may
+  differ in details, and these results are labelled post-hoc and are not part of the frozen headline.
+- **Consequences:** the frozen four-system table and `results/final.json` micro-averages for B0/B1/agent/hybrid are
+  untouched; the new rows are added beside them with a post-hoc label. No LLM calls are needed to reproduce them.
+- **Result (test slices, post-hoc, single run):** b2 recall 0.41 / precision 0.15 / F1 0.21 (229 FP); b3 0.17 / 0.18 /
+  0.18 (71 FP); b4 0.20 / 0.50 / 0.29 (19 FP). Agent-led (F1 0.17) does not beat b2; hybrid (F1 0.34) beats b4 mainly
+  mostly through Bot recall (9 vs 2 detections; SSH-Patator 14 vs 12). See `docs/05-evaluation.md`.
