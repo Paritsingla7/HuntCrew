@@ -33,3 +33,9 @@ def test_predictions_reproduce_the_post_hoc_cheap_baselines():
     got = _micro(["b2", "b3", "b4"])
     for s, (tp, fp, fn) in got.items():
         assert (tp, fp, fn) == (post[s]["tp"], post[s]["fp"], post[s]["fn"]), s
+
+
+def test_predictions_reproduce_the_post_hoc_union_result():
+    post = json.loads((RES / "final.json").read_text())["post_hoc_union"]["micro_average"]
+    tp, fp, fn = _micro(["union"])["union"]
+    assert (tp, fp, fn) == (post["tp"], post["fp"], post["fn"])
