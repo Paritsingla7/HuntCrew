@@ -60,7 +60,9 @@ def fake_completion(*a, **kw):
             {"type": "block_ip", "target": "172.16.0.1", "justification": "block attacker", "mitigation_id": "M1032"},
             {"type": "isolate_host", "target": "192.168.10.3", "justification": "protected DNS", "mitigation_id": None},
             {"type": "force_password_reset", "target": "alice", "justification": "reset", "mitigation_id": "M9999"},
-            {"type": "launch_missiles", "target": "x", "justification": "bad", "mitigation_id": None}]}))
+            {"type": "launch_missiles", "target": "x", "justification": "bad", "mitigation_id": None},
+            {"type": "enable_waf_rule", "target": None, "justification": "no target", "mitigation_id": None},
+            {"type": "block_ip", "target": "8.8.8.8", "justification": "unseen ip", "mitigation_id": None}]}))
     if "Write a concise incident report" in text: return resp("## Summary\nStand-in report for the offline test.")
     raise AssertionError("unrecognised prompt: " + text[:200])
 litellm.completion = fake_completion

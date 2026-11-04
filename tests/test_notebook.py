@@ -46,3 +46,4 @@ def test_notebook_runs_end_to_end_with_a_stand_in_model(tmp_path):
     out = res.stdout
     assert "CONFIRMED 172.16.0.1" in out and "protected asset" in out and "technique CORRECT" in out
     assert "DENIED    force_password_reset" in out and "unknown action type" in out
+    assert "no target given" in out and "not seen in this incident" in out
