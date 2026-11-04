@@ -232,6 +232,19 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   0.18 (71 FP); b4 0.20 / 0.50 / 0.29 (19 FP). Agent-led (F1 0.17) does not beat b2; hybrid (F1 0.34) beats b4 mainly
   mostly through Bot recall (9 vs 2 detections; SSH-Patator 14 vs 12). See `docs/05-evaluation.md`.
 
+## ADR-032 — Post-hoc union of rule and screening candidates
+- **Status:** accepted (post-hoc: the test slices were already used by ADR-028; this is a second look and is reported as such)
+- **Context:** the hybrid cannot exceed B0's recall because rules alone propose its candidates; agent-led screening
+  sees part of the low-and-slow Bot traffic (window recall 0.46 vs 0.17) but floods false positives. ADR-028 named a
+  union of both candidate sets, verified by the same agent, as the obvious next experiment.
+- **Decision:** `candidates_from="union"`: candidates = rule hits ∪ screening flags, rule hits verified first under the
+  8-candidate cap; the verification stage, evidence checks and grader are unchanged. Detection only (no downstream
+  agents). Run on dev first, then once on the three test slices with `ministral-14b-latest`.
+- **Declared before any union result:** the union is called an improvement only if pooled test **F1 exceeds the
+  frozen hybrid's 0.344 without lowering its recall (0.295)**. Otherwise it is reported as a negative result. No
+  prompt changes are allowed between dev and test. Screening and verification prompts are the frozen ones.
+- **Consequences:** the frozen four-system table is untouched; union results sit in the post-hoc block.
+
 ## ADR-035 — The verification pattern is a separate, dependency-free package (`llmverify`)
 - **Status:** accepted
 - **Context:** the reusable idea in HuntCrew is not the detector but the way every LLM claim is checked by code
