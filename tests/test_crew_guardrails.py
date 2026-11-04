@@ -82,3 +82,24 @@ def test_extract_list_accepts_wrapped_and_bare_arrays():
     assert extract_list('{"scores": [{"id": "A", "score": 7}]}', "scores") == [{"id": "A", "score": 7}]
     assert extract_list('```json\n[{"id": "A", "score": 7}, {"id": "B", "score": 2}]\n```', "scores")[1]["id"] == "B"
     assert extract_list("no json", "scores") is None
+
+
+def test_judge_candidates_do_not_depend_on_the_order_searches_arrived():
+    """Parallel tool calls race into kb.trace; the candidate list (judge prompt, cache key) must not."""
+    import random
+    from types import SimpleNamespace
+
+    from huntcrew.crew import DownstreamCrew
+
+    ids = ["T1110", "T1046", "T1071", "T1595", "T1571", "T1090", "T1018", "T1205"]
+    trace = [{"query": f"hypothesis {i}", "ids": [ids[i], ids[(i + 1) % 8], ids[(i + 2) % 8]], "scores": [0.9, 0.5, 0.4]}
+             for i in range(6)]
+    crew = DownstreamCrew(SimpleNamespace(chunks={i: object() for i in ids}, trace=[]), None, None)
+    expected = None
+    for seed in range(8):
+        shuffled = trace[:]
+        random.Random(seed).shuffle(shuffled)
+        crew.kb.trace = shuffled
+        got = crew._candidates(0, ["T1110"])
+        expected = expected or got
+        assert got == expected

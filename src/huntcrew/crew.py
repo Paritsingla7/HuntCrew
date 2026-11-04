@@ -241,7 +241,10 @@ class DownstreamCrew:
         hypothesis cannot crowd out the others), then the agent's own picks, then the rest by score."""
         best: dict[str, float] = {}
         out: list[str] = []
-        for t in self.kb.trace[start:]:
+        # CrewAI may run an agent's parallel tool calls on separate threads, so the ORDER searches land in the
+        # trace is a race. Order by query text so the judge prompt (and its cache key and score tie-break) is
+        # the same on every run.
+        for t in sorted(self.kb.trace[start:], key=lambda x: x.get("query", "")):
             scores = t.get("scores", [0.0] * len(t["ids"]))
             for tid, sc in zip(t["ids"], scores, strict=False):
                 best[tid] = max(best.get(tid, 0.0), sc)
