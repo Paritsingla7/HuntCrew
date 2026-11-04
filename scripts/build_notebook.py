@@ -27,49 +27,52 @@ def code(text: str) -> dict:
 
 CELLS: list[dict] = [
     md(f'''
-# Agentic cyber-threat detection and response (CrewAI + RAG + Mistral)
+# HuntCrew: Agentic Cyber-Threat Detection and Response
+**CrewAI · Retrieval-Augmented Generation · MITRE ATT&CK · Mistral**
 
-**What this notebook does.** It replays real network traffic (the CIC-IDS2017 dataset) one 5-minute window at a
-time and runs a small crew of AI agents on it:
+## Overview
+HuntCrew is a multi-agent system that detects and responds to attacks in real network traffic. Labelled flows from the
+CIC-IDS2017 benchmark are replayed one five-minute window at a time. Inexpensive rules propose suspicious sources; a crew
+of four agents then verifies them, identifies the attack technique, plans a response and writes the incident report, all
+grounded in the official MITRE ATT&CK knowledge base through retrieval-augmented generation (RAG).
 
-| Agent | Job | Tools / knowledge |
+| Agent | Responsibility | Knowledge and tools |
 |---|---|---|
-| **Detector** | Decide which suspicious sources are real attacks and which are false alarms | flow statistics, **RAG** over MITRE ATT&CK |
-| **Threat-Intel** | Name the ATT&CK technique behind an incident | **RAG** (several competing hypotheses, then an evidence-scoring judge) |
+| **Detector** | Separate real attacks from false alarms among the rule candidates | flow statistics, **RAG** over MITRE ATT&CK |
+| **Threat-intelligence** | Identify the ATT&CK technique behind an incident | **RAG** (competing hypotheses, then an evidence-scoring judge) |
 | **Strategist** | Plan a response from the official ATT&CK mitigations | policy, protected assets |
 | **Reporter** | Write the incident report | - |
 
-Around the agents, **plain code** checks every claim (cited technique IDs must exist *and* have been retrieved;
-actions must be in an allow-list and never touch protected assets), a **human approval gate** stands in front of
-risky actions, everything runs on a **simulated** firewall, and the result is **graded by code against the
-dataset's own labels**, which the agents never see.
+## Control layer
+Every agent output is checked by deterministic code: cited technique identifiers must exist *and* have been retrieved;
+actions must belong to an allow-list, must name a target seen in the incident, and may never touch protected assets;
+risky actions are held at a **human approval gate**; execution is **simulated**. Results are **graded by code against the
+dataset's own ground-truth labels**, which the agents never see.
 
-**How to run (about 10 minutes, a free CPU runtime is enough)**
-1. Add a Colab Secret named `MISTRAL_API_KEY` (key icon in the left sidebar) and switch *Notebook access* on.
-2. **Runtime -> Run all.** The first pass installs packages and restarts the session on purpose
-   (Colab says "session crashed"); run all again and click **Grant access** when asked.
-3. If a risky action is proposed, answer the `approve? [y/N]` prompt in section 6.
-
-This notebook is a condensed standalone version. The full project (replay simulator, evaluation harness, 78 tests,
-decision records) is at {REPO_URL}.
+## Execution notes
+The notebook is self-contained and runs on a CPU Colab runtime in about ten minutes. It expects a Colab secret named
+`MISTRAL_API_KEY` with notebook access enabled. The first execution installs the dependencies and restarts the interpreter
+once; the notebook is then executed again from the top. Actions held at the approval gate read a `y/N` response from the
+operator. This notebook is a condensed, self-contained form of the project; the complete implementation (replay simulator,
+evaluation harness, 78 tests, decision records) is available at {REPO_URL}.
 '''),
-    md("## 1. Install packages (once)"),
+    md("## 1. Environment setup"),
     code('''
-# Colab must restart its Python process after packages such as Pillow change. On the first run this cell installs
-# and restarts the session; after that it only prints "ready".
+# Dependencies are installed on first execution. The interpreter is restarted once so that upgraded packages
+# (for example Pillow) load cleanly; later executions skip this step.
 import importlib.util, os, signal, subprocess, sys
 if importlib.util.find_spec("crewai") is None:
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", "crewai==1.15.28", "chromadb==1.5.9",
                     "litellm==1.103.1", "sentence-transformers", "pyarrow"], check=True)
-    print("Packages installed. Restarting the session now - run all cells again.")
+    print("Dependencies installed; restarting the interpreter. Execute the notebook again from the top.")
     os.kill(os.getpid(), signal.SIGKILL)
-print("ready")
+print("dependencies ready")
 '''),
     md('''
-## 2. Language model plumbing
-The agents use `ministral-14b-latest` through CrewAI. Three small workarounds keep it reliable: a request throttle
-with retries (the free tier allows about 30 requests a minute), removal of a prompt-caching field CrewAI adds that the
-Mistral API rejects, and running crews in a worker thread (Jupyter already runs an event loop, which CrewAI refuses).
+## 2. Language-model interface
+The agents run on `ministral-14b-latest` through CrewAI. A thin layer around the model client enforces the provider's rate
+limit (about 30 requests per minute) with retries, removes a prompt-caching field that CrewAI adds and the Mistral API rejects,
+and executes crews in a worker thread because Jupyter already owns an event loop.
 '''),
     code('''
 import asyncio, hashlib, ipaddress, json, os, re, time, urllib.error, urllib.request, warnings
@@ -86,18 +89,18 @@ try:
 except ImportError:
     userdata = None                                           # not on Colab: use the key already in the environment
 if userdata is not None:
-    os.environ["MISTRAL_API_KEY"] = userdata.get("MISTRAL_API_KEY").strip()      # asks you to grant access once
+    os.environ["MISTRAL_API_KEY"] = userdata.get("MISTRAL_API_KEY").strip()      # Colab asks once to grant notebook access to the secret
 KEY = os.environ.get("MISTRAL_API_KEY", "").strip()
-FINGERPRINT = hashlib.sha256(KEY.encode()).hexdigest()[:8]            # short hash to tell two keys apart; not the key
+FINGERPRINT = hashlib.sha256(KEY.encode()).hexdigest()[:8]            # short hash that distinguishes credentials; not the key itself
 try:
     urllib.request.urlopen(urllib.request.Request("https://api.mistral.ai/v1/models",
                            headers={"Authorization": f"Bearer {KEY}"}), timeout=30)
-    print(f"Mistral key accepted (length {len(KEY)}, fingerprint {FINGERPRINT})")
+    print(f"Mistral API key accepted (length {len(KEY)}, fingerprint {FINGERPRINT})")
 except urllib.error.HTTPError as e:
-    raise SystemExit(f"Mistral rejected the key (HTTP {e.code}, length {len(KEY)}, fingerprint {FINGERPRINT}). Create a NEW key in the Mistral console and re-create the Colab secret MISTRAL_API_KEY.")
+    raise SystemExit(f"Mistral API rejected the credentials (HTTP {e.code}; key length {len(KEY)}, fingerprint {FINGERPRINT}). Check the MISTRAL_API_KEY secret.")
 
 import litellm
-_complete, _last = getattr(litellm.completion, "_orig", litellm.completion), [0.0]      # safe to re-run this cell
+_complete, _last = getattr(litellm.completion, "_orig", litellm.completion), [0.0]      # idempotent if this cell is executed again
 def _strip(o):                                                # drop fields the Mistral API rejects
     if isinstance(o, dict): return {k: _strip(v) for k, v in o.items() if k not in ("cache_breakpoint", "cache_control")}
     return [_strip(x) for x in o] if isinstance(o, list) else o
@@ -138,13 +141,13 @@ def fill(template, **kw):
     return template
 '''),
     md('''
-## 3. Real data
-* **Traffic:** CIC-IDS2017 labelled network flows (University of New Brunswick, 2.83 million flows). The labels are
-  kept in a separate variable and are used only by the grader in section 8.
-* **Knowledge:** the official MITRE ATT&CK Enterprise bundle (techniques, sub-techniques, mitigations).
+## 3. Data sources
+* **Network traffic:** CIC-IDS2017 labelled flows (University of New Brunswick; 2.83 million flows). Labels are held in a
+  separate variable and are read only by the evaluation in section 7.
+* **Knowledge:** the MITRE ATT&CK Enterprise bundle (techniques, sub-techniques and mitigations).
 
-Downloads about 425 MB the first time. Timestamps in this dataset are day-first, in mixed formats, on a 12-hour clock
-without AM/PM, so they are repaired when loading.
+Timestamps in the dataset are day-first, in mixed formats and on a 12-hour clock without AM/PM; they are normalised on load.
+About 425 MB are downloaded on first execution.
 '''),
     code('''
 DATA = Path("data"); DATA.mkdir(exist_ok=True)
@@ -167,17 +170,17 @@ print(f"{len(flows):,} flows, {flows.ts.min():%Y-%m-%d %H:%M} to {flows.ts.max()
 def cut(a, b): return flows[(flows.ts >= a) & (flows.ts < b)].reset_index(drop=True)
 base = cut("2017-07-03 10:00", "2017-07-03 11:00").drop(columns="label")      # Monday: benign-only, "what normal looks like"
 live = cut("2017-07-04 13:00", "2017-07-04 14:20")                          # Tuesday afternoon: the demo traffic
-labels = live.pop("label")                                                  # answer key: only the grader (section 8) uses it
+labels = live.pop("label")                                                  # ground truth; read only by the evaluation in section 7
 del flows
 STEP = pd.Timedelta(minutes=5)
 WINDOWS = [pd.Timestamp("2017-07-04 14:00") + i * STEP for i in range(4)]     # four 5-minute windows to replay
 print(f"replaying {len(WINDOWS)} windows from {WINDOWS[0]:%H:%M} to {WINDOWS[-1] + STEP:%H:%M}; labels hidden from the agents")
 '''),
     md('''
-## 4. Retrieval-augmented knowledge base (RAG)
-One chunk per ATT&CK technique or sub-technique (name, tactics, description, official mitigations), embedded with a local
-sentence-transformer and stored in ChromaDB. **Every search is recorded**, so a guardrail can later check that a technique
-an agent cites was really retrieved and not invented.
+## 4. Knowledge base (retrieval-augmented generation)
+Each ATT&CK technique and sub-technique forms one chunk (name, tactics, description, official mitigations), embedded with a
+local sentence-transformer and stored in ChromaDB. Every search is recorded so that a guardrail can verify that a technique
+cited by an agent was actually retrieved rather than invented.
 '''),
     code('''
 def clean(t):
@@ -219,16 +222,16 @@ def search(query, k=5):
     hits = [(i, round(1 - d, 2)) for i, d in zip(res["ids"][0], res["distances"][0])]
     TRACE.append({"query": query, "hits": hits}); return hits
 
-print("\\nretrieval check:")
+print("\\nretrieval sanity check:")
 for q in ["many failed password attempts against a remote login service", "one host connecting to many ports to find open services"]:
     print(" ", q, "->", [f"{i} {KB[i]['name']}" for i, _ in search(q, 3)])
 '''),
     md('''
-## 5. Statistics and a cheap first pass
-Code (no AI) turns each window into per-source statistics and applies three classic rules to **propose** candidates:
-password guessing, port scanning, and regular beaconing to rarely seen destinations. Rules are fast but produce many false
-alarms; the **Detector agent** then verifies each candidate. Replay safety: the agents' view contains only traffic up to
-the end of the current window and no labels.
+## 5. Traffic statistics and rule-based candidate generation
+Deterministic code summarises each window as per-source statistics and applies three classic rules (password guessing, port
+scanning, regular beaconing to rarely seen destinations) to propose candidates. Rules are fast but raise many false alarms, so
+the detector agent verifies each candidate. The agents' view of the traffic ends at the close of the current window and never
+includes labels.
 '''),
     code('''
 NETS = [ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")]
@@ -271,12 +274,11 @@ for w in WINDOWS:
     print(f"{w:%H:%M}-{(w + STEP):%H:%M}  {len(v.now):5d} flows, {v.now.src.nunique():3d} sources  ->  rule candidates: {c if c else 'none'}")
 '''),
     md('''
-## 6. The agents
-### Agent 1: Detector (verifies the rule candidates)
-It has two tools: `source_profile` (this window, the previous hour, top destinations and the source's normal baseline) and
-`search_attack_kb` (RAG). Tool calls are printed so you can watch it work. Its verdicts pass an **evidence check**: the
-entity must really appear in the window, and the numbers attached to a finding are computed by code, never taken from the
-model.
+## 6. Agent pipeline
+### 6.1 Detector agent
+The detector verifies each rule candidate using two tools: `source_profile` (current window, previous hour, top destinations
+and the source's normal baseline) and `search_attack_kb` (RAG). Tool calls are logged. Verdicts pass an evidence check: the
+entity must occur in the window, and all figures attached to a finding are computed by code rather than taken from the model.
 '''),
     code('''
 CTX = {}
@@ -337,10 +339,10 @@ for w in WINDOWS:
 print(f"\\n{len(findings)} confirmed finding(s)")
 '''),
     md('''
-### Agent 2: Threat-Intel (names the technique)
-Findings of the same source in consecutive windows are merged into an **incident**. The agent forms competing hypotheses
-across different ATT&CK tactics and searches for each. A second step then **scores every retrieved candidate against the
-facts**, using the real ATT&CK descriptions, and code keeps only techniques that exist *and* were retrieved.
+### 6.2 Threat-intelligence agent
+Findings for one source in consecutive windows are merged into an incident. The agent forms competing hypotheses across
+ATT&CK tactics and searches for each; a second step then scores every retrieved candidate against the incident facts using
+the ATT&CK descriptions. Code retains only techniques that exist in the knowledge base and were retrieved.
 '''),
     code('''
 def merge(findings):
@@ -409,18 +411,19 @@ for inc in incidents:
     print("   judge scores:", inc["intel"]["scores"], "| ungrounded IDs dropped by the guardrail:", inc["intel"]["dropped"] or "none")
 '''),
     md('''
-### Agent 3: Strategist, with policy, approval gate and a simulated firewall
-The Strategist proposes up to four actions and may cite only **official ATT&CK mitigations** for the named techniques.
-Code then enforces the rules: unknown action types and actions without a target are rejected, an IP target must appear in the
-incident's own traffic, protected assets (the DNS server and gateway) can never be blocked or isolated, low-risk actions run automatically, and **medium and high risk actions wait for you**. Nothing leaves
-this notebook: the environment is a Python object.
+### 6.3 Response strategist, policy and approval gate
+The strategist proposes up to four actions and may cite only official ATT&CK mitigations for the identified techniques.
+Deterministic policy then applies: unknown action types and actions without a target are rejected; an IP target must occur in
+the incident's own traffic; protected assets (the DNS server and the gateway) can never be blocked or isolated; low-risk actions
+run automatically; medium- and high-risk actions wait for operator approval. Execution is simulated: the environment is a Python
+object and nothing leaves the notebook.
 '''),
     code('''
 CATALOG = {"block_ip": "low", "rate_limit_ip": "low", "open_ticket": "low",          # no domain action: flows contain no domain names
            "enable_waf_rule": "medium", "force_password_reset": "medium", "disable_account": "medium", "isolate_host": "high"}
 PROTECTED = {"192.168.10.3": "DNS / domain controller", "192.168.10.1": "gateway / secondary DNS"}     # derived from the DNS traffic
 IP_ACTIONS = {"block_ip", "rate_limit_ip", "isolate_host"}
-APPROVAL = "ask"            # "ask" = prompt you | "deny" / "approve" = unattended runs
+APPROVAL = "ask"            # "ask": operator prompt; "deny" / "approve": unattended execution
 ENV = {"blocked_ips": [], "rate_limited": [], "isolated_hosts": [], "tickets": [], "other": []}
 
 PLAN = """Plan the response to this incident.
@@ -475,7 +478,7 @@ for inc in incidents:
     for a in inc["plan"]["log"]: print(f"   {a['status']:9s} {a['type']} {a['target']}  [{a['why']}]  mitigation={a['mitigation_id']}")
 print("\\nsimulated environment:", {k: v for k, v in ENV.items() if v})
 '''),
-    md("### Agent 4: Reporter"),
+    md("### 6.4 Reporter agent"),
     code('''
 REPORT = """Write a concise incident report in Markdown for a security manager. Sections: Summary, Evidence, ATT&CK mapping, Actions taken
 (executed / denied / rejected), Recommendations. Do not invent facts beyond what is given.
@@ -495,10 +498,10 @@ for inc in incidents:
     display(Markdown(f"### Incident report {inc['id']}\\n\\n" + text))
 '''),
     md('''
-## 7. Grading by code against the dataset's own labels
-Now the answer key (hidden until now) is used, by plain code only. A source in a window is *attack-positive* when it has at least 5
-attack-labelled flows in that window. The mapping from dataset label to ATT&CK technique has four entries
-(SSH-Patator and FTP-Patator -> T1110, Bot -> T1071, PortScan -> T1046).
+## 7. Evaluation against ground truth
+The ground truth is read here for the first time, by code only. A source in a window is attack-positive when it has at least
+five attack-labelled flows in that window. Dataset labels map to ATT&CK techniques as follows: SSH-Patator and FTP-Patator to
+T1110, Bot to T1071, PortScan to T1046.
 '''),
     code('''
 TECH = {"SSH-Patator": "T1110", "FTP-Patator": "T1110", "Bot": "T1071", "PortScan": "T1046"}
@@ -518,10 +521,10 @@ for inc in incidents:
           + ("technique CORRECT" if want and got & want else "technique WRONG" if want else "false-alarm incident"))
 '''),
     md(f'''
-## 8. Results of the full evaluation, and honest limits
-The demo above is four windows. The full project ran the same pipeline, plus three baselines, **once** on three untouched test slices
-(SSH-Patator, Bot, PortScan; 60 windows; 95 attack-positive (window, source) pairs) with the code frozen beforehand. All numbers are
-graded by code (`ministral-14b-latest`):
+## 8. Results of the full evaluation
+The four-window run above is a demonstration. The full evaluation ran the same pipeline together with three baselines, once,
+on three untouched test slices (SSH-Patator, Bot, PortScan; 60 windows; 95 attack-positive (window, source) pairs), with the
+code frozen beforehand. All figures are graded by code (`ministral-14b-latest`).
 
 | System | Recall | Precision | False positives |
 |---|---|---|---|
@@ -530,12 +533,16 @@ graded by code (`ministral-14b-latest`):
 | Agent-led detection (no rules) | 0.36 | 0.11 | 273 |
 | **Hybrid: rules propose, agents verify (this notebook)** | 0.29 | **0.41** | **40** |
 
-* Agents with baselines and retrieval **roughly halve the rules' false positives without losing a detection**.
+* Verification by agents with baselines and retrieval roughly halves the false positives of the rules without losing a detection.
 * Every cited technique was grounded (1.00) and every proposed action stayed inside policy (1.00).
-* **Limits:** naming the technique is the weak step (1 of 9 attack-linked incidents correct in the full run), because flows carry no
-  payloads or login results; slow, low-volume beaconing is mostly missed; samples are small and results are for one model.
 
-Full code, tests, protocol and decision records: {REPO_URL}
+### Limitations
+* Technique identification is the weakest step (1 of 9 attack-linked incidents correct in the full run), because flows carry no
+  payloads or login results.
+* Slow, low-volume beaconing is mostly missed; the sample is small (95 attack-positive pairs) and results are for one model.
+* Flows are labelled by the dataset authors, whose labels contain known noise.
+
+Complete code, tests, protocol and decision records: {REPO_URL}
 '''),
 ]
 
