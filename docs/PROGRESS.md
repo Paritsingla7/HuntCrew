@@ -6,7 +6,7 @@ Newest entry on top.
 - Added `cheap_baselines.py` (b2 quantile rule, b3 IsolationForest, b4 rules-AND-b2 filter), config-driven and
   registry-based, no LLM; `scripts/run_cheap.py`; ADR-031 declares it post-hoc with parameters fixed beforehand.
 - Findings: agent-led (F1 0.17) does not beat b2 (0.21); the LLM verification keeps more true detections than a
-  no-LLM filter (28 vs 19, all from Bot) at somewhat more false positives (40 vs 19). Frozen results unchanged.
+  no-LLM filter (28 vs 19, 7 of the 9 on Bot) at somewhat more false positives (40 vs 19). Frozen results unchanged.
 - Tests: 88 passed (10 new). Next in the improvement list: the union-of-candidates experiment (item 2).
 
 ## 2026-11-04 — Standalone assignment notebook

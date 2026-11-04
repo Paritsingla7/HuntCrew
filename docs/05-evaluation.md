@@ -97,9 +97,9 @@ What this shows:
    b3 ties it on F1 (0.18 vs 0.17). The earlier conclusion that agent-led is not usable on its own is therefore
    stronger than the original table suggested.
 2. **The LLM verification step adds a real but narrow benefit.** The no-LLM filter b4 removes false positives as
-   well as the LLM does or better (19 vs 40 pooled), but it loses true detections (19 vs 28 kept). The whole gap
-   is the Bot slice: hybrid kept 9 of 73 Bot pairs, b4 only 2, because slow bot traffic does not look anomalous by
-   volume and b4 filters it out. Per slice: hybrid is better on SSH-Patator (F1 0.82 vs 0.75) and Bot (0.18 vs
+   well as the LLM does or better (19 vs 40 pooled), but it loses true detections (19 vs 28 kept). Most of the gap
+   (7 of 9) is the Bot slice: hybrid kept 9 of 73 Bot pairs, b4 only 2, because slow bot traffic does not look
+   anomalous by volume and b4 filters it out; the other 2 are SSH-Patator pairs (14 vs 12). Per slice: hybrid is better on SSH-Patator (F1 0.82 vs 0.75) and Bot (0.18 vs
    0.05); **b4 is better on PortScan (0.48 vs 0.32)** with the same 5 detections and fewer false positives.
 3. **Dev agrees:** b4 F1 0.57 vs hybrid 0.58 vs B0 0.42 (FTP-Patator, one incident).
 

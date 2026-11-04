@@ -230,4 +230,4 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   untouched; the new rows are added beside them with a post-hoc label. No LLM calls are needed to reproduce them.
 - **Result (test slices, post-hoc, single run):** b2 recall 0.41 / precision 0.15 / F1 0.21 (229 FP); b3 0.17 / 0.18 /
   0.18 (71 FP); b4 0.20 / 0.50 / 0.29 (19 FP). Agent-led (F1 0.17) does not beat b2; hybrid (F1 0.34) beats b4 mainly
-  through Bot recall (9 vs 2 detections). See `docs/05-evaluation.md`.
+  mostly through Bot recall (9 vs 2 detections; SSH-Patator 14 vs 12). See `docs/05-evaluation.md`.
