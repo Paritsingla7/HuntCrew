@@ -33,7 +33,7 @@ from huntcrew.schema import ActionLog, Finding, ResponsePlan  # noqa: E402
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("split", choices=["dev", "test"])
+    ap.add_argument("split", choices=["dev", "test", "fresh"])
     ap.add_argument("--system", default="hybrid", choices=["agent", "hybrid", "union"])
     ap.add_argument("--model")
     ap.add_argument("--tag", default=None, help="suffix for the output file (default: the model-agnostic name)")

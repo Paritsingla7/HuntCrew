@@ -28,7 +28,7 @@ from huntcrew.replay import Replay  # noqa: E402
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("split", choices=["dev", "test"])
+    ap.add_argument("split", choices=["dev", "test", "fresh"])
     ap.add_argument("name")
     ap.add_argument("--windows", type=int, nargs="*")
     ap.add_argument("--limit", type=int)

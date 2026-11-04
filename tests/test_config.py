@@ -16,7 +16,7 @@ def test_config_has_required_sections():
 def test_splits_do_not_overlap_and_are_ordered():
     cfg = load_config(ROOT / "config.yaml")
     spans = [(s["name"], pd.Timestamp(s["start"]), pd.Timestamp(s["end"]))
-             for group in ("dev", "test") for s in cfg["splits"][group]]
+             for group in ("dev", "test", "fresh") for s in cfg["splits"][group]]
     for name, a, b in spans:
         assert a < b, name
     spans.sort(key=lambda x: x[1])

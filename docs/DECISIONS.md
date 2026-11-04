@@ -309,3 +309,19 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   are now ordered by query text; two consecutive runs are identical with zero live calls.
 - **No prompt tuning:** changing the naming prompts could only be checked on the test incidents, which would be tuning on test,
   so none was done. Fresh incidents (ADR-037) are the place to check a future change.
+
+## ADR-037 — A fresh split: attack families and time ranges no earlier run has used
+- **Status:** accepted. Declared on 2026-11-04 before any system was run on it.
+- **Context:** the frozen evaluation has 95 attack-positive pairs from three attack types, one attacker each, and its test
+  slices were already used for the post-hoc work of ADR-031 and ADR-032. Conclusions about the LLM stages need data that
+  none of that work touched, and about attack families the rules were not written for.
+- **Decision:** a `fresh` split in `config.yaml`: Wednesday DoS (Slowhttptest, Hulk, GoldenEye), Thursday web attacks
+  (brute force, XSS, SQL injection), Friday DDoS, and two stretches of Friday Bot and PortScan activity outside the test
+  slices. New labels map to T1499 / T1110 / T1190 (rationale in `docs/label-mapping.md`). A Bot stretch with no
+  attack-positive pair was dropped, decided from the labels alone.
+- **Size:** 66 windows and 57 attack-positive pairs (Bot 24, Web 16, DoS 10, DDoS 5, PortScan 2). This is small: it supports
+  indications about whether the earlier conclusions hold, not precise rates.
+- **Protocol:** every system is run on it once, with the frozen prompts and the parameters already in `config.yaml`; nothing is
+  tuned on it. B0 has no rule for DoS or web attacks, so its recall there is zero by construction.
+- **Consequences:** the earlier splits' ground truth is unchanged (tested). The mapping of the DoS family to T1499 is a
+  judgement (T1498 is the alternative for network-layer floods; the CIC attacks are HTTP-level).

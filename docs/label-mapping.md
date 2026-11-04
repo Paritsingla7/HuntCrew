@@ -10,8 +10,14 @@ purpose so anyone can audit it. Source of truth in code: `config.yaml → labels
 | `Bot` | T1071 | Application Layer Protocol | ARES bot checks in with its C2 over HTTP (port 8080) |
 | `PortScan` | T1046 | Network Service Discovery | Enumerating open ports/services |
 | `BENIGN` | — | — | no technique expected |
+| `DoS Hulk`, `DoS GoldenEye`, `DoS slowloris`, `DoS Slowhttptest`, `DDoS` | T1499 | Endpoint Denial of Service | HTTP floods and slow-HTTP attacks exhaust the web service (fresh split only) |
+| `Web Attack – Brute Force` | T1110 | Brute Force | Web login guessing (fresh split only) |
+| `Web Attack – XSS`, `Web Attack – Sql Injection` | T1190 | Exploit Public-Facing Application | Exploiting a web application (fresh split only) |
 
-Out of scope for now: DoS/DDoS classes, Web Attack classes, Heartbleed, Infiltration.
+The last three rows were added on 2026-11-04 for the fresh split (ADR-037), before any system was run on it. They do not
+change the ground truth of the dev and test splits (checked by `tests/test_fresh_split.py`).
+
+Out of scope: Heartbleed and Infiltration (11 and 36 flows in total, too few to grade).
 
 ## Matching rule
 **Parent-level match.** A truth of `T1110` is satisfied by `T1110` or any sub-technique (`T1110.001`…).
