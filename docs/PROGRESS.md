@@ -7,7 +7,8 @@ Newest entry on top.
   the agentic part and nothing else: data, RAG, rule candidates, four agents, guardrails, approval gate, grading (ADR-030).
   The repository is the full project; the notebook links to it.
 - Tested without an API key: stand-in model over the real data and real CrewAI tool calling (78 tests + 1 slow test).
-- Mistral key now rejected (I-022), so the live run is pending (I-023).
+- Mistral key was rejected for a while (I-022); a new key fixed it. The notebook then ran live on Colab: attacker confirmed in 3 of 3 windows,
+  1 false alarm, 0 missed; technique named SSH instead of T1110 (I-025). Two Strategist guardrail gaps found and fixed.
 
 ## 2026-11-03 — Earlier same-day notebook consolidation; folder renamed
 - The Colab side had three files (notebook, a generator script in `notebooks/`, `requirements-colab.txt`) and the

@@ -94,7 +94,7 @@ secret without spaces. 429 on `mistral-small`/`medium` → the key has no quota 
 
 **Testing.** The notebook is checked against its generator, every code cell must parse, and a slow test runs the whole
 notebook on the real data against a stand-in model (`HUNTCREW_SLOW=1 pytest tests/test_notebook.py`). A live run
-with the real model needs a valid Mistral key.
+with the real model has been done on Colab (see `ISSUES.md` I-025 for what it showed and what was fixed).
 
 ## 5. Run it locally
 ```bash
