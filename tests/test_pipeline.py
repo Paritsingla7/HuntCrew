@@ -91,3 +91,24 @@ def test_grade_outcomes_counts_accuracy_grounding_and_policy():
     assert g["technique_accuracy_incident"] == 1.0 and g["incident_precision"] == 1.0
     assert g["grounding_rate"] == 0.5            # T1110.001 exists, T9999 was dropped
     assert g["policy_pass_rate"] == 0.5 and g["mitigation_grounded_share"] == 0.5
+
+
+def test_tactic_level_accuracy_is_secondary_and_optional():
+    from huntcrew.evaluate import tactics_of
+    from huntcrew.schema import ActionLog, ResponsePlan, TechniqueAssessment, ThreatAssessment
+    tactics = {"T1071": ["command-and-control"], "T1571": ["command-and-control"], "T1595": ["reconnaissance"],
+               "T1110": ["credential-access"]}
+    assert tactics_of("T1071.001", tactics) == {"command-and-control"} and tactics_of("T9", tactics) == set()
+
+    def outcome(tech):
+        return SimpleNamespace(incident=_incident(), plan=ResponsePlan(incident_id="INC-001"),
+                               assessment=ThreatAssessment(incident_id="INC-001", techniques=[TechniqueAssessment(id=tech)]),
+                               guard=SimpleNamespace(dropped_actions=[]), log=ActionLog(incident_id="INC-001"))
+
+    truth = pd.DataFrame([dict(window_index=0, entity="172.16.0.1", label="Bot", technique="T1071", n_attack_flows=9)])
+    w = [Window(0, pd.Timestamp(T0), pd.Timestamp("2017-07-04 14:05"))]
+    near = grade_outcomes([outcome("T1571")], truth, w, {"T1571"}, tactics)         # wrong technique, right tactic
+    far = grade_outcomes([outcome("T1595")], truth, w, {"T1595"}, tactics)          # wrong technique, wrong tactic
+    assert near["technique_accuracy_incident"] == 0.0 and near["tactic_accuracy_incident"] == 1.0
+    assert far["tactic_accuracy_incident"] == 0.0
+    assert "tactic_accuracy_incident" not in grade_outcomes([outcome("T1571")], truth, w, {"T1571"})   # optional

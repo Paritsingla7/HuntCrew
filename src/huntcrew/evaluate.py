@@ -76,18 +76,26 @@ def score_findings(findings: Iterable[Finding], truth: pd.DataFrame, windows: li
     }
 
 
-def grade_outcomes(outcomes: list, truth: pd.DataFrame, windows: list[Window], kb_ids: set[str]) -> dict:
+def tactics_of(technique_id: str, tactics: dict[str, list[str]]) -> set[str]:
+    """ATT&CK tactics of a technique ID (falls back to the parent for a sub-technique). Official data only."""
+    return set(tactics.get(technique_id) or tactics.get(parent(technique_id)) or [])
+
+
+def grade_outcomes(outcomes: list, truth: pd.DataFrame, windows: list[Window], kb_ids: set[str],
+                   tactics: dict[str, list[str]] | None = None) -> dict:
     """Incident-level grading of the full pipeline (technique naming, grounding, response quality).
 
     An incident is *attack-linked* when at least one of its (window, entity) findings is attack-positive.
-    Technique accuracy is measured on attack-linked incidents only, at parent level.
+    Technique accuracy is measured on attack-linked incidents only, at parent level. If `tactics` (technique ID
+    -> ATT&CK tactics, from the official data) is given, a secondary tactic-level accuracy is added: an incident
+    counts when any assessed technique shares a tactic with the true technique.
     """
     starts = {pd.Timestamp(w.start): w.index for w in windows}
     truth_tech: dict[tuple[int, str], set[str]] = defaultdict(set)
     for r in truth.itertuples(index=False):
         truth_tech[(int(cast(int, r.window_index)), str(r.entity))].add(str(r.technique))
 
-    linked = correct = 0
+    linked = correct = tactic_correct = 0
     cited = grounded = 0
     actions = executed_or_denied = with_mitigation = 0
     for o in outcomes:
@@ -99,6 +107,10 @@ def grade_outcomes(outcomes: list, truth: pd.DataFrame, windows: list[Window], k
             linked += 1
             got = {parent(t.id) for t in o.assessment.techniques}
             correct += int(bool(got & want))
+            if tactics is not None:
+                want_t = set().union(*(tactics_of(t, tactics) for t in want))
+                got_t = set().union(*(tactics_of(t.id, tactics) for t in o.assessment.techniques))
+                tactic_correct += int(bool(got_t & want_t))
         n_ok, n_drop = len(o.assessment.techniques), len(o.assessment.dropped_ids)
         cited += n_ok + n_drop
         grounded += sum(1 for t in o.assessment.techniques if t.id in kb_ids)
@@ -107,7 +119,11 @@ def grade_outcomes(outcomes: list, truth: pd.DataFrame, windows: list[Window], k
             executed_or_denied += int(r.status != "rejected")
             with_mitigation += int(r.action.mitigation_id is not None)
         actions += len(o.guard.dropped_actions)               # unknown action types never reach the executor
+    extra = ({"tactic_correct": tactic_correct,
+              "tactic_accuracy_incident": round(tactic_correct / linked, 3) if linked else 0.0}
+             if tactics is not None else {})
     return {
+        **extra,
         "incidents": len(outcomes), "attack_linked_incidents": linked,
         "incident_precision": round(linked / len(outcomes), 3) if outcomes else 0.0,
         "technique_accuracy_incident": round(correct / linked, 3) if linked else 0.0,
