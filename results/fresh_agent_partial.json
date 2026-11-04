@@ -1,0 +1,33 @@
+{
+  "split": "fresh",
+  "model": "mistral/ministral-14b-latest",
+  "slices": {
+    "bot_fresh_pm": {
+      "windows": 12,
+      "agent": {
+        "detection": {
+          "truth_positives": 24,
+          "predicted_positives": 51,
+          "tp": 3,
+          "fp": 48,
+          "fn": 21,
+          "precision": 0.059,
+          "recall": 0.125,
+          "f1": 0.08,
+          "window_recall": 0.25,
+          "technique_accuracy_on_tp": 0.0
+        },
+        "incidents": 35,
+        "llm": {
+          "calls": 0,
+          "cache_hits": 0,
+          "retries": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "waited_s": 0.0
+        },
+        "seconds": 0.0
+      }
+    }
+  }
+}
