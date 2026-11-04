@@ -157,6 +157,23 @@ includes zero, and agent-led vs the plain rule b2 is borderline (upper end at ze
 depends on which windows were drawn. They are still narrower than a new attacker or a new day would justify, because the windows
 of one attack are correlated and each slice has one attacker.
 
+## Technique naming, read more closely (ADR-034, post-hoc)
+Same nine attack-linked incidents of the hybrid system, `ministral-14b`, graded two ways:
+
+| Metric | Result |
+|---|---|
+| Strict (parent-level match with the label's technique, the frozen headline) | 1 / 9 (SSH-Patator only) |
+| Tactic-level (an assessed technique shares an ATT&CK tactic with the key) | 6 / 9 (SSH-Patator 1/1, Bot 5/7, PortScan 0/1) |
+
+The Bot hosts are mostly named with other command-and-control techniques (proxy, data obfuscation, non-standard port, web
+service) where the key says Application Layer Protocol T1071; the external port scanner is named Active Scanning (reconnaissance)
+where the key says Network Service Discovery. The tactic-level number says the system is usually in the right area while picking
+a different technique, which the strict metric hides. It does not say the names are correct: the answer key has one technique per
+label, and the model also chose data-exfiltration techniques for two Bot hosts. One run of one model on nine incidents.
+
+A reproducibility bug was fixed while measuring this: the judge's candidate order depended on the arrival order of parallel tool
+calls, so re-runs changed the answer. The numbers above are from the fixed code, identical across two runs.
+
 ## Reproduce
 ```bash
 python -I scripts/fetch_data.py

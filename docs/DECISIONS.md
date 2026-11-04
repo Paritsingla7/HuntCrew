@@ -292,3 +292,20 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 
 - **Result (test, one run):** recall 0.44, precision 0.14, F1 **0.22**, 247 FP vs hybrid F1 0.34, 40 FP. **Criterion not met;
   reported as a negative result.** Dev: F1 0.23 vs 0.58. See `docs/05-evaluation.md`.
+
+## ADR-034 — Technique naming: a tactic-level secondary metric, and a determinism fix
+- **Status:** accepted (post-hoc; the strict metric and the frozen result are unchanged)
+- **Context:** naming scored 1 of 9 attack-linked incidents. Reading the answers showed two things: several "wrong" answers
+  are plausible (an external port scan named Active Scanning T1595 where the answer key says Network Service Discovery T1046;
+  Bot hosts named with other command-and-control techniques where the key says T1071), and the answer key is one hand-chosen
+  technique per label. MITRE's data has no software entries for Nmap, Patator or the Ares bot, so a principled derived key
+  does not exist.
+- **Decision:** keep the strict parent-level match as the headline and add a secondary **tactic-level** accuracy computed from
+  the official ATT&CK data: an incident counts when an assessed technique shares a tactic with the key's technique. It adds no
+  hand-made mapping beyond the existing label→technique map. `scripts/grade_naming.py` reports both per incident.
+- **Bug found and fixed on the way:** the judge's candidate list was ordered by the order in which parallel tool calls
+  reached the search trace, which is a thread race. Re-running the same incident changed the judge prompt (cache miss) and the
+  score tie-break, so the named technique changed between runs (tactic-level 5, then 4 of 9 on consecutive re-runs). Candidates
+  are now ordered by query text; two consecutive runs are identical with zero live calls.
+- **No prompt tuning:** changing the naming prompts could only be checked on the test incidents, which would be tuning on test,
+  so none was done. Fresh incidents (ADR-037) are the place to check a future change.

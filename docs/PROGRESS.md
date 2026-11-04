@@ -2,6 +2,10 @@
 
 Newest entry on top.
 
+## 2026-11-04 — Technique naming
+- Tactic-level metric (official ATT&CK data) beside the strict one: strict 1/9, tactic 6/9. Fixed a race that made the judge's
+  candidate order, and so the named technique, vary between runs (I-028). No prompt tuning on test incidents.
+
 ## 2026-11-04 — Uncertainty: paired window bootstrap
 - `stats.py`, `export_predictions.py`, `bootstrap_ci.py`; per-window predictions saved in `results/predictions_test.json` so intervals
   reproduce without the LLM caches; a test ties them to the frozen micro-averages (and the post-hoc ones). Hybrid vs B0 clear;
