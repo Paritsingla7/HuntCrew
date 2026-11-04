@@ -15,23 +15,35 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from llmverify import ActionGate, Decision
+
 from .schema import ActionLog, ActionRecord, ProposedAction, ResponsePlan
 
 IP_ACTIONS = {"block_ip", "rate_limit_ip", "isolate_host"}
 _DOMAIN = re.compile(r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$", re.I)
 
 
-@dataclass(frozen=True)
-class Decision:
-    status: str          # auto | needs_approval | rejected
-    reason: str
-    risk: str = ""
+def _ip_error(target: str) -> str | None:
+    try:
+        ipaddress.ip_address(target)
+    except ValueError:
+        return f"target '{target}' is not an IP address"
+    return None
+
+
+def _domain_error(target: str) -> str | None:
+    return None if _DOMAIN.match(target) else f"target '{target}' is not a domain name"
 
 
 class Policy:
+    """HuntCrew's rule set, enforced by the generic `llmverify.ActionGate`."""
+
     def __init__(self, catalog: dict[str, dict[str, str]], protected_ips: set[str]):
         self.catalog = catalog
         self.protected = protected_ips
+        self._gate = ActionGate(catalog, protected_ips,
+                                validators={**dict.fromkeys(IP_ACTIONS, _ip_error), "block_domain": _domain_error},
+                                protected_actions=IP_ACTIONS)
 
     @classmethod
     def from_file(cls, path: str | Path) -> Policy:
@@ -39,22 +51,7 @@ class Policy:
         return cls(data["action_catalog"], {a["ip"] for a in data.get("protected_assets", [])})
 
     def check(self, a: ProposedAction) -> Decision:
-        spec = self.catalog.get(a.type)
-        if spec is None:
-            return Decision("rejected", f"unknown action '{a.type}'")
-        risk = spec["risk"]
-        if a.type in IP_ACTIONS:
-            try:
-                ipaddress.ip_address(a.target)
-            except ValueError:
-                return Decision("rejected", f"target '{a.target}' is not an IP address", risk)
-            if a.target in self.protected:
-                return Decision("rejected", f"{a.target} is a protected asset", risk)
-        if a.type == "block_domain" and not _DOMAIN.match(a.target):
-            return Decision("rejected", f"target '{a.target}' is not a domain name", risk)
-        if risk == "low":
-            return Decision("auto", "low risk", risk)
-        return Decision("needs_approval", f"{risk} risk action requires approval", risk)
+        return self._gate.check(a.type, a.target)
 
 
 @dataclass

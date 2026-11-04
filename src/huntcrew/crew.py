@@ -15,6 +15,8 @@ from typing import Any
 os.environ.setdefault("CREWAI_DISABLE_TELEMETRY", "true")
 os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 
+from llmverify import ground_ids  # noqa: E402
+
 from .attack_kb import AttackKB  # noqa: E402
 from .response import Policy  # noqa: E402
 from .schema import Incident, ProposedAction, ResponsePlan, TechniqueAssessment, ThreatAssessment  # noqa: E402
@@ -82,19 +84,16 @@ def incident_profile(flows: Any, inc: Incident) -> str:
 # --- guardrails -------------------------------------------------------------------------------
 def guard_assessment(draft: dict, incident_id: str, kb_ids: set[str], retrieved: set[str]) -> ThreatAssessment:
     techs: list[TechniqueAssessment] = []
-    dropped: list[str] = []
-    for t in draft.get("techniques") or []:
+    raw = list(draft.get("techniques") or [])
+    kept, dropped = ground_ids([str((t or {}).get("id", "")) for t in raw], kb_ids, retrieved)   # str(): a null id counts as dropped
+    for t in raw:
         tid = str((t or {}).get("id", "")).strip()
-        if not tid:
-            continue
-        if tid in kb_ids and tid in retrieved:
+        if tid and tid in kept:
             try:
                 conf = max(0.0, min(1.0, float(t.get("confidence", 0.5))))
             except (TypeError, ValueError):
                 conf = 0.5
             techs.append(TechniqueAssessment(id=tid, confidence=conf, citation=str(t.get("citation", tid))))
-        else:
-            dropped.append(tid)
     return ThreatAssessment(incident_id=incident_id, techniques=techs,
                             rationale=str(draft.get("rationale", ""))[:600], dropped_ids=dropped)
 
