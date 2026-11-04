@@ -2,6 +2,10 @@
 
 Newest entry on top.
 
+## 2026-11-04 — Fresh split
+- Declared before any run (ADR-037): DoS, web attacks, DDoS and unused Bot/PortScan stretches, 66 windows, 57 positives. Result: nothing
+  generalises well; hybrid F1 0.02, the volume rule b2 0.11. Agent-led only partly run (provider outage on the 14b model, I-030; resumable).
+
 ## 2026-11-04 — Technique naming
 - Tactic-level metric (official ATT&CK data) beside the strict one: strict 1/9, tactic 6/9. Fixed a race that made the judge's
   candidate order, and so the named technique, vary between runs (I-028). No prompt tuning on test incidents.

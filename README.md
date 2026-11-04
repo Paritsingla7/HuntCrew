@@ -60,7 +60,9 @@ beaconing is mostly missed. Full tables, protocol and limitations: `docs/05-eval
 false positives as well as the LLM does, but keeps fewer true detections (19 vs 28, mostly on the Bot slice), which
 is the narrow benefit the LLM verification step adds. With window-bootstrap intervals (`docs/05-evaluation.md`): the hybrid
 beats B0 (+0.06 F1, interval excludes zero) and agent-led, but its edge over the no-LLM filter is not statistically clear.
-The post-hoc union of rule and screening candidates (declared criterion not met) is worse than the hybrid.
+On attack families the rules do not cover (a never-used fresh split of DoS, DDoS and web attacks plus unused Bot/PortScan stretches), the hybrid
+detects almost nothing (F1 0.02) and the plain volume rule is the best system (F1 0.11): the hybrid is a triage layer for a rule set, not a
+general detector. The post-hoc union of rule and screening candidates (declared criterion not met) is worse than the hybrid.
 
 ## Status
 All phases built, evaluated and verified on Colab. See `docs/PROGRESS.md` and `docs/ISSUES.md`.

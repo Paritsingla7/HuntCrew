@@ -325,3 +325,6 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   tuned on it. B0 has no rule for DoS or web attacks, so its recall there is zero by construction.
 - **Consequences:** the earlier splits' ground truth is unchanged (tested). The mapping of the DoS family to T1499 is a
   judgement (T1498 is the alternative for network-layer floods; the CIC attacks are HTTP-level).
+- **Result (one run, frozen prompts):** pooled F1 B0 0.03, b2 0.11, b3 0.09, b4 0.00, hybrid 0.02 (agent-led only partly run: provider
+  outage). The hybrid's test advantage does not carry over to attack families the rules do not cover; the volume rule b2 is the only
+  system that finds the floods. See `docs/05-evaluation.md`.
