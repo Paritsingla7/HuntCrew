@@ -58,7 +58,9 @@ beaconing is mostly missed. Full tables, protocol and limitations: `docs/05-eval
 **Post-hoc check (no LLM, ADR-031):** a plain statistical outlier rule matches or beats the agent-led detector
 (F1 0.21 vs 0.17), so first-pass LLM detection adds nothing here. A no-LLM filter on the rules' output removes
 false positives as well as the LLM does, but keeps fewer true detections (19 vs 28, mostly on the Bot slice), which
-is the narrow benefit the LLM verification step adds.
+is the narrow benefit the LLM verification step adds. With window-bootstrap intervals (`docs/05-evaluation.md`): the hybrid
+beats B0 (+0.06 F1, interval excludes zero) and agent-led, but its edge over the no-LLM filter is not statistically clear.
+The post-hoc union of rule and screening candidates (declared criterion not met) is worse than the hybrid.
 
 ## Status
 All phases built, evaluated and verified on Colab. See `docs/PROGRESS.md` and `docs/ISSUES.md`.

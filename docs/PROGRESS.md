@@ -2,6 +2,11 @@
 
 Newest entry on top.
 
+## 2026-11-04 — Uncertainty: paired window bootstrap
+- `stats.py`, `export_predictions.py`, `bootstrap_ci.py`; per-window predictions saved in `results/predictions_test.json` so intervals
+  reproduce without the LLM caches; a test ties them to the frozen micro-averages (and the post-hoc ones). Hybrid vs B0 clear;
+  hybrid vs the no-LLM filter not.
+
 ## 2026-11-04 — Union of candidates (negative result)
 - `candidates_from="union"` (rules ∪ screening, rule hits verified first under the cap). Frozen modes verified unchanged by
   re-running the SSH-Patator hybrid from the LLM cache (identical findings, 0 API calls). First direct tests for `detect_window`.

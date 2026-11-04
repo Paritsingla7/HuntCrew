@@ -129,6 +129,34 @@ Reading: with this model the agent's verification step filters rule hits well bu
 merely look unusual, so widening the candidate set trades precision for recall at a poor rate. It does not show that a
 stronger verifier would fail.
 
+## How sure are these numbers? (ADR-033, post-hoc, no new model run)
+Intervals come from a paired bootstrap that resamples whole 5-minute windows within each slice (the same windows for every
+system), 2000 draws. Pooled test slices:
+
+| System | Precision | Recall | F1 | F1 95% interval |
+|---|---|---|---|---|
+| B0 rules | 0.27 | 0.29 | 0.28 | 0.20 to 0.36 |
+| b2 quantile rule (no LLM) | 0.15 | 0.41 | 0.21 | 0.15 to 0.27 |
+| b3 IsolationForest (no LLM) | 0.18 | 0.17 | 0.18 | 0.10 to 0.24 |
+| b4 rules AND b2 (no LLM) | 0.50 | 0.20 | 0.29 | 0.21 to 0.35 |
+| Agent-led | 0.11 | 0.36 | 0.17 | 0.12 to 0.22 |
+| **Hybrid** | 0.41 | 0.29 | **0.34** | 0.24 to 0.44 |
+| Union (post-hoc) | 0.14 | 0.44 | 0.22 | 0.15 to 0.28 |
+
+| Difference in F1 | Mean | 95% interval | Share of resamples above 0 |
+|---|---|---|---|
+| hybrid - B0 | +0.062 | +0.042 to +0.085 | 1.00 |
+| hybrid - agent-led | +0.172 | +0.081 to +0.261 | 1.00 |
+| hybrid - b4 (no-LLM filter) | +0.056 | -0.022 to +0.135 | 0.91 |
+| agent-led - b2 | -0.045 | -0.092 to -0.000 | 0.02 |
+| union - hybrid | -0.122 | -0.186 to -0.057 | 0.00 |
+
+What this supports: the hybrid beats the rules it is built on and beats agent-led detection, and the union is worse than the
+hybrid; those intervals exclude zero. What it does not: the hybrid's edge over the no-LLM filter b4 (+0.056) has an interval that
+includes zero, and agent-led vs the plain rule b2 is borderline (upper end at zero). The intervals describe how much the result
+depends on which windows were drawn. They are still narrower than a new attacker or a new day would justify, because the windows
+of one attack are correlated and each slice has one attacker.
+
 ## Reproduce
 ```bash
 python -I scripts/fetch_data.py
