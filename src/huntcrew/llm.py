@@ -226,6 +226,13 @@ def check_api_key(timeout: float = 20.0) -> tuple[bool, str]:
         return False, f"could not reach the provider: {e}"
 
 
+def throttle_for(cfg: dict, model: str | None = None) -> tuple[float, int]:
+    """(min_interval_s, tokens_per_minute) for `model`: its entry in llm.model_limits, else the defaults."""
+    c = cfg["llm"]
+    o = (c.get("model_limits") or {}).get(model or c["model"], {})
+    return float(o.get("min_interval_s", c["min_interval_s"])), int(o.get("tokens_per_minute", c["tokens_per_minute"]))
+
+
 def make_llm(cfg: dict, model: str | None = None):
     """CrewAI LLM for the configured model. Call `install()` first so the middleware is in place."""
     from crewai import LLM

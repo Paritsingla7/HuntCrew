@@ -41,8 +41,8 @@ def main() -> None:
 
     cfg = load_config()
     llmmod.load_dotenv()
-    mw = llmmod.install(cfg["llm"]["min_interval_s"], cfg["llm"]["tokens_per_minute"],
-                        cfg["llm"]["max_retries"], cfg["llm"]["cache_dir"])
+    interval, tpm = llmmod.throttle_for(cfg, a.model)
+    mw = llmmod.install(interval, tpm, cfg["llm"]["max_retries"], cfg["llm"]["cache_dir"])
     llm = llmmod.make_llm(cfg, a.model)
 
     sl_cfg = next(s for s in cfg["splits"][a.split] if s["name"] == a.name)

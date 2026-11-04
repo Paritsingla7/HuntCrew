@@ -162,3 +162,14 @@ def test_check_api_key_strips_quotes_and_whitespace(monkeypatch):
     ok, msg = m.check_api_key()
     assert seen["auth"] == "Bearer abc123" and ok is False and "length 6" in msg and "HTTP 401" in msg
     assert "abc123" not in msg
+
+
+def test_throttle_for_uses_the_models_own_limits_else_the_defaults():
+    from huntcrew.llm import throttle_for
+    cfg = {"llm": {"model": "mistral/big", "min_interval_s": 2.1, "tokens_per_minute": 700000,
+                   "model_limits": {"mistral/fast": {"min_interval_s": 0.4, "tokens_per_minute": 500000},
+                                    "mistral/halfset": {"min_interval_s": 1.0}}}}
+    assert throttle_for(cfg, "mistral/fast") == (0.4, 500000)
+    assert throttle_for(cfg) == (2.1, 700000) and throttle_for(cfg, "mistral/unlisted") == (2.1, 700000)
+    assert throttle_for(cfg, "mistral/halfset") == (1.0, 700000)                # missing fields fall back individually
+    assert throttle_for({"llm": {"model": "m", "min_interval_s": 1, "tokens_per_minute": 9}}, None) == (1.0, 9)
