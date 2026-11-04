@@ -244,6 +244,21 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   frozen hybrid's 0.344 without lowering its recall (0.295)**. Otherwise it is reported as a negative result. No
   prompt changes are allowed between dev and test. Screening and verification prompts are the frozen ones.
 - **Consequences:** the frozen four-system table is untouched; union results sit in the post-hoc block.
+## ADR-033 — Uncertainty for the detection scores: a paired bootstrap over replay windows
+- **Status:** accepted (post-hoc analysis of results that already exist; no new model run)
+- **Context:** the frozen table reports point estimates from 95 attack-positive pairs with one attacker per slice. Pairs in the
+  same window, and neighbouring windows of one attack, are not independent, so intervals from resampling single pairs would
+  be too narrow, and a difference between two systems needs an interval too.
+- **Decision:** resample whole replay windows within each slice, the same windows for every system (paired), 2000 draws,
+  seed 0, 95% percentile intervals (`src/huntcrew/stats.py`, `scripts/bootstrap_ci.py`, settings in `config.yaml`). The pooled
+  point estimates it recomputes equal the frozen micro-averages (tested). The comparisons listed in `config.yaml` were chosen
+  from the questions of ADR-031 and ADR-032, listed once and not extended after seeing the intervals.
+- **Reproducibility:** `scripts/export_predictions.py` saves each system's per-window (window, source) keys to
+  `results/predictions_<split>.json`, so the intervals do not need the git-ignored LLM caches.
+- **Limits:** windows of one attack are still correlated and there is one attacker per slice, so the intervals are narrower
+  than a fresh attacker or a fresh day would justify; they say how much the result depends on which windows were drawn, not
+  how it would generalise.
+
 ## ADR-035 — The verification pattern is a separate, dependency-free package (`llmverify`)
 - **Status:** accepted
 - **Context:** the reusable idea in HuntCrew is not the detector but the way every LLM claim is checked by code
