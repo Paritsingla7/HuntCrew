@@ -95,4 +95,4 @@ Newest entry on top.
 | P5 Downstream crew + response | ✅ done |
 | P6 Evaluation | ✅ done |
 | P7 Colab | ✅ done |
-| P8 Polish | ⬜ |
+| P8 Polish | ✅ done (v1.0.0, final state) |
