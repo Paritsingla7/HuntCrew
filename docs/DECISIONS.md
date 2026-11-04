@@ -245,3 +245,20 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   preserved on purpose because it feeds the grounding metric. The existing tests pass unchanged.
 - **Consequences:** `llmverify` has its own tests and README and could be published on its own; it makes no claim that
   checked output is correct, only that unchecked output does not reach a decision.
+
+## ADR-036 — Real-log adapters, a streaming window source and a webhook approver
+- **Status:** accepted. **What this is not:** none of it has run against a live capture; the adapters are tested on
+  samples written to the documented Zeek `conn.log` and Suricata `eve.json` formats, and the approver on a fake transport.
+- **Context:** the evaluation replays one dataset from a parquet file, and approvals are typed into a console, so the
+  pipeline could not be pointed at a real log or reach a human outside the process.
+- **Decision:** (1) `sources.py`: a registry of flow sources (`cic`, `zeek_conn`, `suricata_eve`) that return the canonical
+  flow table and refuse label columns; new formats register by name. (2) `stream.py`: `WindowStream` yields the same
+  `(Window, FlowView)` as the batch replay from batches that arrive over time, emitting a window only once a later flow has
+  been read; late flows raise or are dropped and counted. (3) `approvers.py`: `http_approver` POSTs a request and approves
+  only on an explicit `{"approved": true}`, failing closed on anything else.
+- **Verification:** the stream equals the batch `Replay` (same `current()` and `history()` for every window) over random
+  batchings; a Zeek log with an SSH burst is detected by the unchanged B0 rule in the right window; the approver denies
+  on errors, timeouts, malformed answers and non-http URLs.
+- **Known gaps:** Zeek/Suricata give only lower-bound SYN/RST counts (documented in `sources.py`); thresholds and baselines
+  learned on CIC-IDS2017 are not expected to transfer to another network without refitting on that network's own benign
+  traffic; no real chat-ops integration is shipped, only the generic webhook client.

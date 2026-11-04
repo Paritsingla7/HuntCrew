@@ -79,6 +79,11 @@ pytest -q
 ```
 The LLM stage needs `MISTRAL_API_KEY` in the environment (a local `.env` is git-ignored).
 
+## Your own logs
+`huntcrew.sources.load_flows("zeek_conn" | "suricata_eve" | "cic", path)` returns the table the pipeline reads, and
+`huntcrew.stream.WindowStream` feeds it window by window as flows arrive. `huntcrew.approvers.http_approver(url)` sends
+risky actions to a human-run endpoint (fails closed). These are tested on format samples, not live captures (ADR-036).
+
 ## Docs
 | File | Contents |
 |---|---|
