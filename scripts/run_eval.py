@@ -2,6 +2,7 @@
 
     python scripts/run_eval.py dev --systems b0 b1 agent hybrid
     python scripts/run_eval.py test --systems b0 b1 hybrid          # only at evaluation time (ADR-019)
+    python scripts/run_eval.py dev --systems union --no-downstream  # post-hoc union of rule + screening candidates
 
 Everything is graded by code against dataset labels. LLM responses are cached, so re-runs are cheap.
 """
@@ -36,7 +37,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("split", choices=["dev", "test"])
     ap.add_argument("--systems", nargs="+", default=["b0", "b1", "hybrid"],
-                    choices=["b0", "b1", "agent", "hybrid"])
+                    choices=["b0", "b1", "agent", "hybrid", "union"])
     ap.add_argument("--names", nargs="*", help="slice names (default: all in the split)")
     ap.add_argument("--max-windows", type=int, help="debug: only the first N windows of each slice")
     ap.add_argument("--no-downstream", action="store_true", help="skip assess/plan/execute/report")
@@ -86,10 +87,10 @@ def main() -> None:
                     if dg.total_flows:
                         findings += b1_window(llm, dg.to_text(), w, minutes)
             else:
-                path = Path(".cache/runs") / f"{'agent' if system == 'agent' else 'hybrid'}_{a.split}_{s['name']}.jsonl"
+                mode = {"agent": "screen", "hybrid": "rules", "union": "union"}[system]
+                path = Path(".cache/runs") / f"{system}_{a.split}_{s['name']}.jsonl"
                 res = run_detector(sl.flows, s["start"], s["end"], cfg, kb, profile, llm, path, mw,
-                                   only_windows=only, candidates_from="screen" if system == "agent" else "rules",
-                                   known_dsts=known)
+                                   only_windows=only, candidates_from=mode, known_dsts=known)
                 findings = [f for r in res for f in r.findings]
             entry = {"detection": {k: v for k, v in score_findings(findings, truth, windows).items()
                                    if k != "per_technique"}}

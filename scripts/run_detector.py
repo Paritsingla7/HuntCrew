@@ -20,7 +20,7 @@ from huntcrew.attack_kb import AttackKB, load_chunks  # noqa: E402
 from huntcrew.baselines import known_destinations  # noqa: E402
 from huntcrew.config import load_config  # noqa: E402
 from huntcrew.data_cic import load_cic  # noqa: E402
-from huntcrew.detector import merge_into_incidents, run_detector  # noqa: E402
+from huntcrew.detector import CANDIDATE_MODES, merge_into_incidents, run_detector  # noqa: E402
 from huntcrew.evaluate import attack_truth, score_findings  # noqa: E402
 from huntcrew.profile import BaselineProfile  # noqa: E402
 from huntcrew.replay import Replay  # noqa: E402
@@ -34,8 +34,9 @@ def main() -> None:
     ap.add_argument("--limit", type=int)
     ap.add_argument("--model")
     ap.add_argument("--tag", default=None)
-    ap.add_argument("--mode", choices=["screen", "rules"], default="screen",
-                    help="screen = agent-led detection; rules = hybrid fallback (B0 rules propose, agent verifies)")
+    ap.add_argument("--mode", choices=list(CANDIDATE_MODES), default="screen",
+                    help="screen = agent-led detection; rules = hybrid (B0 rules propose, agent verifies); "
+                         "union = rule and screening candidates together, agent verifies (post-hoc, ADR-032)")
     a = ap.parse_args()
 
     cfg = load_config()
@@ -52,7 +53,7 @@ def main() -> None:
     kb = AttackKB(load_chunks(cfg["data"]["attack_stix"]), cfg["rag"]["embedding_model"], cfg["rag"]["persist_dir"])
     sl = data.select(pd.Timestamp(sl_cfg["start"]), pd.Timestamp(sl_cfg["end"]))
 
-    tag = a.tag or ("agent" if a.mode == "screen" else "hybrid")
+    tag = a.tag or {"screen": "agent", "rules": "hybrid", "union": "union"}[a.mode]
     out = Path(".cache/runs") / f"{tag}_{a.split}_{a.name}.jsonl"
     known = known_destinations(data.select(pd.Timestamp(base["start"]), pd.Timestamp(base["end"])).flows)
     results = run_detector(sl.flows, sl_cfg["start"], sl_cfg["end"], cfg, kb, profile, llm, out, mw,

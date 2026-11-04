@@ -2,6 +2,11 @@
 
 Newest entry on top.
 
+## 2026-11-04 — Union of candidates (negative result)
+- `candidates_from="union"` (rules ∪ screening, rule hits verified first under the cap). Frozen modes verified unchanged by
+  re-running the SSH-Patator hybrid from the LLM cache (identical findings, 0 API calls). First direct tests for `detect_window`.
+- ADR-032 fixed the criterion first. Test: F1 0.22 vs hybrid 0.34; recall up to 0.44 but 247 false positives. Not met.
+
 ## 2026-11-04 — Post-hoc cheap baselines (does the LLM earn its place?)
 - Added `cheap_baselines.py` (b2 quantile rule, b3 IsolationForest, b4 rules-AND-b2 filter), config-driven and
   registry-based, no LLM; `scripts/run_cheap.py`; ADR-031 declares it post-hoc with parameters fixed beforehand.

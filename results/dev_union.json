@@ -1,0 +1,33 @@
+{
+  "split": "dev",
+  "model": "mistral/ministral-14b-latest",
+  "slices": {
+    "ftp_patator": {
+      "windows": 21,
+      "union": {
+        "detection": {
+          "truth_positives": 14,
+          "predicted_positives": 99,
+          "tp": 13,
+          "fp": 86,
+          "fn": 1,
+          "precision": 0.131,
+          "recall": 0.929,
+          "f1": 0.23,
+          "window_recall": 0.929,
+          "technique_accuracy_on_tp": 0.154
+        },
+        "incidents": 52,
+        "llm": {
+          "calls": 116,
+          "cache_hits": 70,
+          "retries": 4,
+          "prompt_tokens": 884535,
+          "completion_tokens": 46616,
+          "waited_s": 63.8
+        },
+        "seconds": 803.2
+      }
+    }
+  }
+}
