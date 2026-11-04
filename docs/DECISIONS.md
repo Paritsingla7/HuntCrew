@@ -231,3 +231,17 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 - **Result (test slices, post-hoc, single run):** b2 recall 0.41 / precision 0.15 / F1 0.21 (229 FP); b3 0.17 / 0.18 /
   0.18 (71 FP); b4 0.20 / 0.50 / 0.29 (19 FP). Agent-led (F1 0.17) does not beat b2; hybrid (F1 0.34) beats b4 mainly
   mostly through Bot recall (9 vs 2 detections; SSH-Patator 14 vs 12). See `docs/05-evaluation.md`.
+
+## ADR-035 — The verification pattern is a separate, dependency-free package (`llmverify`)
+- **Status:** accepted
+- **Context:** the reusable idea in HuntCrew is not the detector but the way every LLM claim is checked by code
+  (quoted numbers, cited IDs, proposed actions). That logic was spread over `evidence.py`, `crew.py` and `response.py`.
+- **Decision:** extract it to `src/llmverify/` (`claims`, `grounding`, `gate`): plain values in, plain results out, no
+  model calls and no security vocabulary. HuntCrew now uses it instead of keeping its own copies (`verify_finding`,
+  `guard_assessment`, `Policy.check` delegate to it).
+- **Verification of "no behaviour change":** the refactored functions were compared with the previous implementations on
+  random inputs (3000 action/target pairs for the policy, 3000 drafts for the ID guard, 4000 drafts for the evidence check),
+  with identical results in every case; this caught one difference (a null ID was counted as a dropped ID before) which is
+  preserved on purpose because it feeds the grounding metric. The existing tests pass unchanged.
+- **Consequences:** `llmverify` has its own tests and README and could be published on its own; it makes no claim that
+  checked output is correct, only that unchecked output does not reach a decision.
