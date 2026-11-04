@@ -257,6 +257,26 @@ def rule_candidates(ctx: DetectorContext, rules: dict, known_dsts: set[str] | No
     return out
 
 
+CANDIDATE_MODES = ("screen", "rules", "union")     # who proposes the sources the verifier looks at
+
+
+def merge_candidate_notes(screened: dict[str, str], ruled: dict[str, str]) -> dict[str, str]:
+    """Candidate sources with a note each. A source proposed by both gets both notes."""
+    out = dict(screened)
+    for ent, note in ruled.items():
+        out[ent] = f"{out[ent]}; {note}" if ent in out else note
+    return out
+
+
+def order_candidates(flagged: dict[str, str], priority: set[str]) -> list[str]:
+    """Sources to verify, most important first: `priority` ones (sorted), then the rest (sorted).
+
+    With an empty `priority` this is plain address order, the original behaviour. The union mode puts
+    rule-fired sources first so the candidate cap drops screening-only sources, not rule hits."""
+    first = sorted(e for e in flagged if e in priority)
+    return first + sorted(e for e in flagged if e not in priority)
+
+
 def detect_window(ctx: DetectorContext, llm: Any, known_ids: set[str], minutes: int, max_iter: int = 6,
                   mw: Middleware | None = None, candidates_from: str = "screen",
                   rules: dict | None = None, known_dsts: set[str] | None = None) -> WindowResult:
@@ -266,14 +286,15 @@ def detect_window(ctx: DetectorContext, llm: Any, known_ids: set[str], minutes: 
     if ctx.digest.total_flows == 0:
         return res
 
-    if candidates_from == "rules":
-        flagged, failed = rule_candidates(ctx, rules or {}, known_dsts), False
-    else:
-        flagged, failed = screen_sources(ctx, llm, minutes)
+    if candidates_from not in CANDIDATE_MODES:
+        raise ValueError(f"unknown candidates_from '{candidates_from}'; choose one of {CANDIDATE_MODES}")
+    ruled = rule_candidates(ctx, rules or {}, known_dsts) if candidates_from in ("rules", "union") else {}
+    screened, failed = screen_sources(ctx, llm, minutes) if candidates_from in ("screen", "union") else ({}, False)
+    flagged = merge_candidate_notes(screened, ruled)
     res.screened_unusual = sorted(flagged)
     res.parse_error = failed
     if flagged:
-        cand = sorted(flagged)[:MAX_CANDIDATES]
+        cand = order_candidates(flagged, set(ruled) if candidates_from == "union" else set())[:MAX_CANDIDATES]
         res.candidates_truncated = len(flagged) - len(cand)
         by_ent = {e.entity: e for e in ctx.digest.entities}
         for c in cand:
