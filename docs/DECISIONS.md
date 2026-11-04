@@ -244,7 +244,6 @@ Status values: `accepted`, `superseded by ADR-xxx`.
   frozen hybrid's 0.344 without lowering its recall (0.295)**. Otherwise it is reported as a negative result. No
   prompt changes are allowed between dev and test. Screening and verification prompts are the frozen ones.
 - **Consequences:** the frozen four-system table is untouched; union results sit in the post-hoc block.
-
 ## ADR-035 — The verification pattern is a separate, dependency-free package (`llmverify`)
 - **Status:** accepted
 - **Context:** the reusable idea in HuntCrew is not the detector but the way every LLM claim is checked by code
@@ -275,3 +274,6 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 - **Known gaps:** Zeek/Suricata give only lower-bound SYN/RST counts (documented in `sources.py`); thresholds and baselines
   learned on CIC-IDS2017 are not expected to transfer to another network without refitting on that network's own benign
   traffic; no real chat-ops integration is shipped, only the generic webhook client.
+
+- **Result (test, one run):** recall 0.44, precision 0.14, F1 **0.22**, 247 FP vs hybrid F1 0.34, 40 FP. **Criterion not met;
+  reported as a negative result.** Dev: F1 0.23 vs 0.58. See `docs/05-evaluation.md`.

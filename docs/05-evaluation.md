@@ -108,6 +108,27 @@ significance-tested rates; b2 is very sensitive to its quantile (dev false posit
 0.995 / 0.999, kept at the pre-declared 0.995); b3 and b4 are simple choices, not tuned baselines. Before this
 formal run the same ideas were tried once informally on the test slices (disclosed in ADR-031).
 
+## Post-hoc: union of rule and screening candidates (ADR-032, `ministral-14b`, test slices, one run)
+The obvious next experiment named in ADR-028: the agent verifies the rule hits AND the sources the screening flagged. The
+success criterion was committed before any result: pooled test F1 above the hybrid's 0.344 without lowering its recall (0.295).
+
+| Slice | System | Recall | Precision | F1 | FP |
+|---|---|---|---|---|---|
+| ssh_patator | Hybrid / Union | 1.00 / 1.00 | 0.70 / 0.17 | 0.82 / 0.30 | 6 / 66 |
+| bot | Hybrid / Union | 0.12 / 0.32 | 0.36 / 0.18 | 0.18 / 0.23 | 16 / 101 |
+| portscan | Hybrid / Union | 0.62 / 0.62 | 0.22 / 0.06 | 0.32 / 0.11 | 18 / 80 |
+| **all test slices** | Hybrid | 0.29 | 0.41 | **0.34** | 40 |
+| **all test slices** | **Union** | **0.44** | 0.14 | 0.22 | 247 |
+
+**Result: the criterion is not met (F1 0.22 < 0.34); this is a negative result.** The union does what it was meant to do on
+recall (pooled 0.44 vs 0.29; Bot detections 23 vs 9 of 73), and the screening-only candidates are where the extra Bot hits
+come from. But the verifier confirms most of the busy-but-ordinary hosts it is shown, so false positives rise sixfold
+(247 vs 40) and the result lands on the plain volume rule b2 (recall 0.41, F1 0.21, 229 FP) at about four times the hybrid's
+tokens (2.3M vs 0.55M). On dev the pattern is the same (recall equal to hybrid, 86 FP vs 18, F1 0.23 vs 0.58).
+Reading: with this model the agent's verification step filters rule hits well but cannot reliably reject candidates that
+merely look unusual, so widening the candidate set trades precision for recall at a poor rate. It does not show that a
+stronger verifier would fail.
+
 ## Reproduce
 ```bash
 python -I scripts/fetch_data.py
