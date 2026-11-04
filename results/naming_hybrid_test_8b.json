@@ -1,0 +1,169 @@
+{
+  "system": "hybrid",
+  "model": "mistral/ministral-8b-latest",
+  "attack_linked_incidents": 7,
+  "strict_correct": 3,
+  "tactic_correct": 3,
+  "strict_accuracy": 0.429,
+  "tactic_accuracy": 0.429,
+  "by_slice": {
+    "ssh_patator": {
+      "n": 1,
+      "strict": 0,
+      "tactic": 0
+    },
+    "bot": {
+      "n": 5,
+      "strict": 2,
+      "tactic": 2
+    },
+    "portscan": {
+      "n": 1,
+      "strict": 1,
+      "tactic": 1
+    }
+  },
+  "incidents": [
+    {
+      "slice": "ssh_patator",
+      "entity": "172.16.0.1",
+      "truth": [
+        "T1110"
+      ],
+      "assessed": [
+        [
+          "T1499.002",
+          0.8
+        ],
+        [
+          "T1498",
+          0.7
+        ]
+      ],
+      "strict_ok": false,
+      "tactic_ok": false
+    },
+    {
+      "slice": "bot",
+      "entity": "192.168.10.14",
+      "truth": [
+        "T1071"
+      ],
+      "assessed": [
+        [
+          "T1498.001",
+          0.7
+        ],
+        [
+          "T1496.002",
+          0.6
+        ]
+      ],
+      "strict_ok": false,
+      "tactic_ok": false
+    },
+    {
+      "slice": "bot",
+      "entity": "192.168.10.15",
+      "truth": [
+        "T1071"
+      ],
+      "assessed": [
+        [
+          "T1041",
+          0.9
+        ],
+        [
+          "T1020",
+          0.8
+        ]
+      ],
+      "strict_ok": false,
+      "tactic_ok": false
+    },
+    {
+      "slice": "bot",
+      "entity": "192.168.10.9",
+      "truth": [
+        "T1071"
+      ],
+      "assessed": [
+        [
+          "T1020",
+          0.8
+        ],
+        [
+          "T1567",
+          0.7
+        ]
+      ],
+      "strict_ok": false,
+      "tactic_ok": false
+    },
+    {
+      "slice": "bot",
+      "entity": "192.168.10.5",
+      "truth": [
+        "T1071"
+      ],
+      "assessed": [
+        [
+          "T1571",
+          0.7
+        ],
+        [
+          "T1071.004",
+          0.6
+        ]
+      ],
+      "strict_ok": true,
+      "tactic_ok": true
+    },
+    {
+      "slice": "bot",
+      "entity": "192.168.10.9",
+      "truth": [
+        "T1071"
+      ],
+      "assessed": [
+        [
+          "T1498.001",
+          0.6
+        ],
+        [
+          "T1071",
+          0.5
+        ]
+      ],
+      "strict_ok": true,
+      "tactic_ok": true
+    },
+    {
+      "slice": "portscan",
+      "entity": "172.16.0.1",
+      "truth": [
+        "T1046"
+      ],
+      "assessed": [
+        [
+          "T1046",
+          0.7
+        ],
+        [
+          "T1205",
+          0.6
+        ]
+      ],
+      "strict_ok": true,
+      "tactic_ok": true
+    }
+  ],
+  "llm": {
+    "calls": 0,
+    "cache_hits": 39,
+    "retries": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "waited_s": 0.0
+  }
+}

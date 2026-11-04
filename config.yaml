@@ -8,6 +8,12 @@ llm:
   min_interval_s: 2.1                   # measured via response headers: 30 requests/minute for this model
   tokens_per_minute: 700000             # measured: 937,500 tokens/minute; keep headroom
   cache_dir: .cache/llm
+  # Per-model throttle overrides, measured from response headers on 2026-11-04 (limit with headroom). A model not listed
+  # here uses min_interval_s / tokens_per_minute above. Larger Mistral models return a request limit of 0 on this key.
+  model_limits:
+    mistral/ministral-3b-latest: {min_interval_s: 0.1, tokens_per_minute: 1000000}    # 750 req/min, 1.3M tokens/min
+    mistral/ministral-8b-latest: {min_interval_s: 0.4, tokens_per_minute: 500000}     # 188 req/min, 625k tokens/min
+    mistral/open-mistral-nemo: {min_interval_s: 0.4, tokens_per_minute: 500000}       # 188 req/min, 625k tokens/min
 
 rag:
   embedding_model: sentence-transformers/all-MiniLM-L6-v2

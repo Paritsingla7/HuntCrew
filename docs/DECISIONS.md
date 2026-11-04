@@ -328,3 +328,20 @@ Status values: `accepted`, `superseded by ADR-xxx`.
 - **Result (one run, frozen prompts):** pooled F1 B0 0.03, b2 0.11, b3 0.09, b4 0.00, hybrid 0.02 (agent-led only partly run: provider
   outage). The hybrid's test advantage does not carry over to attack families the rules do not cover; the volume rule b2 is the only
   system that finds the floods. See `docs/05-evaluation.md`.
+
+## ADR-038 — Model-size sweep within the models this key can use (post-hoc, exploratory)
+- **Status:** accepted. Declared before any sweep result. Post-hoc: it uses the test slices.
+- **Context:** the evaluation used one model (`ministral-14b-latest`). The question "would a stronger model help?" cannot be
+  answered directly: on this key `mistral-small/medium/large` and the `magistral` models return a request limit of 0 (or are
+  outside the subscription tier), as recorded in I-011 and re-checked on 2026-11-04. What can be measured is the trend inside
+  the accessible range.
+- **Decision:** run the hybrid system (rules propose, agent verifies, then threat-intel, strategist and reporter) on the three
+  test slices with `ministral-3b`, `ministral-8b` and `open-mistral-nemo`, with the frozen prompts and no per-model tuning, and
+  compare with the frozen 14b result. Report pooled detection P/R/F1, incident-level technique accuracy (strict and tactic),
+  grounding and policy rates, tokens and time. No success threshold: it is a description of a trend, not a test.
+- **Limits:** three small models and one 14B model cover a narrow size range and two model families' worth of variation at best;
+  a flat or noisy trend would not show that a much larger model would not help. Models differ in more than size.
+- **Consequences:** per-model throttle limits are configuration (`llm.model_limits`), run files are separated with `--run-tag`.
+- **Result (test, one run each):** pooled F1 0.26 (3b), 0.31 (8b), 0.26 (nemo), 0.34 (14b, frozen). A mild upward direction inside
+  the Ministral family, within the noise of the bootstrap intervals; naming not rankable (different incident sets, n of 5 to 9).
+  Guardrail rejections rise on weaker models (policy pass 0.88 to 0.89). See `docs/05-evaluation.md`.

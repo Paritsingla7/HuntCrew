@@ -42,13 +42,14 @@ def main() -> None:
     ap.add_argument("--max-windows", type=int, help="debug: only the first N windows of each slice")
     ap.add_argument("--no-downstream", action="store_true", help="skip assess/plan/execute/report")
     ap.add_argument("--model")
+    ap.add_argument("--run-tag", default="", help="keeps this model's resumable run files apart (e.g. --run-tag nemo)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
 
     cfg = load_config()
     llmmod.load_dotenv()
-    mw = llmmod.install(cfg["llm"]["min_interval_s"], cfg["llm"]["tokens_per_minute"],
-                        cfg["llm"]["max_retries"], cfg["llm"]["cache_dir"])
+    interval, tpm = llmmod.throttle_for(cfg, a.model)
+    mw = llmmod.install(interval, tpm, cfg["llm"]["max_retries"], cfg["llm"]["cache_dir"])
     llm = llmmod.make_llm(cfg, a.model)
     minutes = cfg["replay"]["window_minutes"]
 
@@ -88,7 +89,8 @@ def main() -> None:
                         findings += b1_window(llm, dg.to_text(), w, minutes)
             else:
                 mode = {"agent": "screen", "hybrid": "rules", "union": "union"}[system]
-                path = Path(".cache/runs") / f"{system}_{a.split}_{s['name']}.jsonl"
+                tag = f"-{a.run_tag}" if a.run_tag else ""
+                path = Path(".cache/runs") / f"{system}{tag}_{a.split}_{s['name']}.jsonl"
                 res = run_detector(sl.flows, s["start"], s["end"], cfg, kb, profile, llm, path, mw,
                                    only_windows=only, candidates_from=mode, known_dsts=known)
                 findings = [f for r in res for f in r.findings]

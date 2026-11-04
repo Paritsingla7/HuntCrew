@@ -36,13 +36,14 @@ def main() -> None:
     ap.add_argument("split", choices=["dev", "test", "fresh"])
     ap.add_argument("--system", default="hybrid", choices=["agent", "hybrid", "union"])
     ap.add_argument("--model")
+    ap.add_argument("--run-tag", default="", help="read the run files of a tagged run (see run_eval --run-tag)")
     ap.add_argument("--tag", default=None, help="suffix for the output file (default: the model-agnostic name)")
     a = ap.parse_args()
 
     cfg = load_config()
     llmmod.load_dotenv()
-    mw = llmmod.install(cfg["llm"]["min_interval_s"], cfg["llm"]["tokens_per_minute"], cfg["llm"]["max_retries"],
-                        cfg["llm"]["cache_dir"])
+    interval, tpm = llmmod.throttle_for(cfg, a.model)
+    mw = llmmod.install(interval, tpm, cfg["llm"]["max_retries"], cfg["llm"]["cache_dir"])
     llm = llmmod.make_llm(cfg, a.model)
     data = load_cic(cfg["data"]["cic_parquet"])
     kb = AttackKB(load_chunks(cfg["data"]["attack_stix"]), cfg["rag"]["embedding_model"], cfg["rag"]["persist_dir"])
@@ -52,7 +53,7 @@ def main() -> None:
 
     outcomes, rows = [], []
     for s in cfg["splits"][a.split]:
-        run = Path(".cache/runs") / f"{a.system}_{a.split}_{s['name']}.jsonl"
+        run = Path(".cache/runs") / f"{a.system}{'-' + a.run_tag if a.run_tag else ''}_{a.split}_{s['name']}.jsonl"
         if not run.is_file():
             print(f"skip {s['name']}: no run file {run}")
             continue
